@@ -19,10 +19,27 @@ from __future__ import annotations
 import argparse
 import hashlib
 import os
+import sys
 from pathlib import Path
 from typing import Dict, List, Tuple
 
 import pandas as pd
+
+
+def _force_utf8_stdio() -> None:
+    """Make stdout/stderr tolerate non-ASCII output (emoji, accented text).
+
+    The default Windows console encoding is cp1252, which raises
+    UnicodeEncodeError on the emoji and French text printed below. Reconfigure
+    to UTF-8 with replacement so the tool prints safely on any platform.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None:
+            try:
+                reconfigure(encoding="utf-8", errors="replace")
+            except (ValueError, OSError):
+                pass
 
 
 IMAGE_EXT = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tif", ".tiff"}
@@ -162,6 +179,8 @@ def main() -> None:
     ap.add_argument("--create-manifest", action="store_true", help="Create data_manifest.csv for benchmarking.")
 
     args = ap.parse_args()
+
+    _force_utf8_stdio()
 
     print(f"📂 Scan du répertoire: {args.data_dir}")
     df, stats = scan_data_dir(args.data_dir, max_files=args.max_files)
