@@ -210,24 +210,26 @@ def gen_image(out_dir: Path, target_bytes: int, comp: Component,
     except Exception as exc:  # pragma: no cover
         raise SystemExit("ERROR: image generation needs Pillow + numpy (in requirements.txt). "
                          f"{exc}")
+    # These datasets are for scalability/throughput, where file *content* is
+    # irrelevant (unlike D1, which is real data for compression quality). We
+    # generate pure-noise JPEGs: np.random.randint is C-level fast, and noise
+    # is nearly incompressible so each image lands as a large, predictable file
+    # (~1-2 bytes/pixel at q80). Choosing the pixel dimension therefore lets us
+    # target a per-file byte size directly and keep the file *count* low, which
+    # matters because tens of thousands of tiny files swamp the filesystem.
     written, n, safety = 0, 0, 0
     while written < target_bytes:
-        # Mix smooth gradient (compressible) with noise so JPEG size varies
-        # realistically and the compression benchmark has non-trivial content.
-        dim = rng.randint(384, 1600)
-        yy, xx = np.mgrid[0:dim, 0:dim]
-        base = ((xx * rng.uniform(0.1, 0.9) + yy * rng.uniform(0.1, 0.9)) % 256).astype("uint8")
-        noise = np.random.randint(0, 60, size=(dim, dim), dtype="uint8")
-        # uint8 arithmetic wraps mod 256 automatically (numpy), giving varied channels.
-        arr = np.stack([base + noise,
-                        base * np.uint8(2) + noise,
-                        base // np.uint8(2) + noise], axis=-1).astype("uint8")
+        target_file = draw_size(rng, comp.min_mb, comp.max_mb)
+        # noise JPEG at q~80 measures ~0.55 bytes/pixel; pixels = target/0.55,
+        # dim = sqrt(pixels/3). Keeps output file size close to the drawn target.
+        dim = max(64, int((target_file / 0.55 / 3) ** 0.5))
+        arr = np.random.randint(0, 256, size=(dim, dim, 3), dtype="uint8")
         p = out_dir / f"{comp.name}_{start_idx + n:06d}{comp.ext}"
-        Image.fromarray(arr, "RGB").save(p, quality=rng.randint(70, 92))
+        Image.fromarray(arr, "RGB").save(p, quality=rng.randint(72, 88))
         written += p.stat().st_size
         n += 1
         safety += 1
-        if safety > 5_000_000:  # pathological guard
+        if safety > 2_000_000:  # pathological guard
             break
     return n, written
 
