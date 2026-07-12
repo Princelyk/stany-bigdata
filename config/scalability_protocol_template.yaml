@@ -1,0 +1,25 @@
+protocol:
+  output_root: results/data/protocol
+  baseline_dataset: D1
+  weak_scaling:
+    repetitions_per_dataset: 3
+    correctness_samples: 100
+    kem_alg: ML-KEM-1024
+    max_bytes_per_file: 0
+    write_encrypted: false
+  strong_scaling:
+    fixed_dataset: D2
+    threads: [1, 2, 4, 8, 16]
+    repetitions: 3
+    max_bytes_per_file: 0
+
+datasets:
+  D1:
+    data_dir: data/user_data/D1
+    target_note: "Preserve original D1 composition"
+  D2:
+    data_dir: data/user_data/D2
+    target_note: "50-60 GB mixed composition"
+  D3:
+    data_dir: data/user_data/D3
+    target_note: "100 GB high-entropy dominant"

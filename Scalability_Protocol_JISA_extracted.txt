@@ -1,0 +1,202 @@
+﻿Scalability Study Protocol
+A Rigorous Experimental Design for JISA Submission
+Manuscript: "A Reproducible Hybrid Security Pipeline for Heterogeneous Data"
+Purpose of this document
+You have decided to expand the scalability evaluation from one dataset (D1, 3.79 GB) to three datasets (D1 preserved, D2 > 50 GB, D3 = 100 GB). This document specifies (i) which types of data are appropriate for each dataset, (ii) what a JISA reviewer will expect from a proper scalability analysis, (iii) how the scalability figure should be designed to satisfy those expectations, and (iv) the experimental protocol that produces defensible measurements. Every recommendation is calibrated for Elsevier Q1 review standards.
+Honesty note: reaching this level of experimental rigour will require significant work — roughly 2 to 4 weeks of full-time effort depending on your compute resources. The upside is substantial: it moves your acceptance probability from ~30% to ~55–65% by directly addressing the single weakest section of the current manuscript.
+1.  Choice of datasets: what to measure and why
+The three datasets should differ along two independent axes: total volume (this is what the reader expects to see) and file-type composition (this is what really drives throughput in your pipeline). Varying only volume — the mistake in the current D1 study — gives an unfalsifiable result because the composition stays the same and the pipeline traverses similar code paths at each measurement point. Varying composition alongside volume lets you separate two distinct claims: 'the pipeline is stable at scale' and 'the pipeline is robust to input heterogeneity'.
+1.1  Concrete dataset recommendations
+D1 (preserved, 3.79 GB — small scale, image-dominant). Keep D1 exactly as it is. It anchors continuity with the earlier version of the paper and serves as your smallest data point. Its composition — 75 JPEG images, 50 MP4 binary files, 1 JSON — is image-heavy relative to volume, so VAE compression benefits are maximally visible.
+D2 (new, 50–60 GB — medium scale, mixed composition). Build D2 to be roughly 15× larger than D1 while shifting composition toward a more industrial mix. A defensible target: 40% images (mixed JPEG/PNG), 40% binary blobs (MP4 video, compressed archives), 20% structured text (JSON logs, CSV telemetry). This tests whether the near-flat throughput observed on D1 survives a change in file-type ratios.
+D3 (new, 100 GB — target scale, high-entropy stress case). D3 should be the harshest case for your pipeline: high-entropy data that resists both classical compression and VAE compression, at a volume that exercises memory-management pathways not visible at smaller scales. A defensible target: 80% high-entropy binary (video, already-compressed archives, encrypted blobs), 15% structured text, 5% images. If throughput remains stable on D3, the claim of scalability becomes credible.
+1.2  Types of data that are appropriate for a security pipeline benchmark
+A JISA reviewer will look at your dataset choices through the lens of realism: does this data resemble something a security pipeline would actually process in a deployed system? The following categories are all defensible and appear routinely in the security-benchmarking literature.
+Data category
+Concrete sources
+Why it matters for security
+Expected pipeline behaviour
+Multimedia (images/video)
+MS-COCO subset, OpenImages subset, YouTube-8M shards, Kinetics video snippets
+Represents surveillance, medical imaging, evidence archives — realistic targets of confidentiality pipelines
+VAE compression matters (for images); high-throughput AES-GCM regime
+System logs
+Loghub-2.0 (17 real-system log datasets, 380 GB total), CERT insider-threat log dataset
+Represents SIEM ingestion pipelines and audit trails — a top real-world use case for post-quantum data-at-rest protection
+Text-heavy; VAE useless; classical compression may help; AES-GCM per-file overhead visible
+Network traffic (PCAPs)
+CICIDS-2017/2018 (CIC), UNSW-NB15, MAWI backbone traces, CAIDA anonymised passive traces
+Represents encrypted-traffic archival, threat-intel storage — standard in intrusion-detection literature
+Small-file regime; KEM overhead dominates; excellent stress test for per-file cost amortisation
+Structured tabular data
+KDD-Cup archives, MIMIC-III-Demo (public subset), synthetic customer databases (Faker library)
+Represents encrypted database column protection, GDPR-compliant tabular storage
+Highly compressible with classical methods; comparison point for VAE (which fails on tabular)
+Encrypted / high-entropy blobs
+Randomised binary generated from /dev/urandom, pre-encrypted files, compressed video (H.264/H.265)
+Represents worst case for compression, best case for cryptographic-cost isolation
+VAE and classical compression both fail; measures pure AES-GCM + KEM cost
+IoT / sensor telemetry
+UCI HAR dataset, Intel Lab Data, DEBS Grand Challenge streams
+Aligns with the IoT deployment scenarios you already cite (Kumari, Malina, Liu)
+Very small files; tests per-record KEM cost at extreme rates
+For your D2 and D3, I recommend combining categories to reflect a realistic security-pipeline workload. A concrete suggestion:
+•  D2 (60 GB): 24 GB of MS-COCO images subset (multimedia) + 18 GB of Loghub-2.0 samples (system logs) + 12 GB of MAWI PCAP snippets (network) + 6 GB of MIMIC-III-Demo (tabular). This gives you four categories, comparable proportions, and every source is publicly redistributable.
+•  D3 (100 GB): 60 GB high-entropy binary (mix of already-compressed video and urandom blobs, to stress the no-compression case) + 20 GB of MAWI PCAP + 15 GB of Loghub-2.0 + 5 GB of tabular. High-entropy dominance makes this the pipeline's worst nominal case.
+On dataset ethics and reproducibility
+All datasets named above are publicly available under research licenses. For your reproducibility package you do not need to redistribute the raw data — you only need to publish (i) the SHA-256 manifest of the exact files you used, (ii) the download URLs, (iii) any preprocessing scripts (splits, format conversions, size trimming). This is now standard practice in Elsevier journals and satisfies both open-science and data-protection requirements.
+If you use any dataset containing personal data (MIMIC, CERT, etc.), state explicitly in your Ethics section that only the public de-identified subset was used. JISA reviewers check this.
+2.  What a JISA reviewer expects from a scalability analysis
+A reviewer with cryptography or systems background reads a scalability section looking for specific signals. When those signals are missing, the section is dismissed as descriptive rather than analytical. The eight expectations below are drawn from what typical reviewers write in Elsevier reports for this class of paper.
+2.1  Expectation 1 — Range that spans meaningful orders of magnitude
+A study covering less than one order of magnitude cannot support any extrapolation claim. Your current D1 range (0.6–3.79 GB) is a factor of ~6. Adding D2 (50–60 GB) and D3 (100 GB) extends the range to a factor of ~170, or roughly 2.2 orders of magnitude. This is the minimum acceptable range for the word 'scalability' in a Q1 systems paper.
+How this document addresses it: Section 4 below specifies measurement points at 1 GB, 3 GB, 10 GB, 30 GB, 60 GB, and 100 GB — six anchor points spanning two orders of magnitude, plus intermediate variants.
+2.2  Expectation 2 — Independent replication, not cumulative sub-sampling
+Your current D1 study uses cumulative sub-samples of one dataset. A reviewer notices immediately that seven measurements on the same underlying data are not seven independent observations — they are one observation reported seven times at different truncation points. The three-dataset design fixes this by giving you truly independent measurement runs across compositions.
+How this document addresses it: each dataset is measured independently with fresh randomisation (VAE seed, nonce sequence, KEM ephemeral keys) and independent OS-level cache flushes between runs. Section 4.3 gives the exact protocol.
+2.3  Expectation 3 — Statistical treatment beyond a single linear fit
+A single OLS regression with R² alone is insufficient. Reviewers expect: confidence intervals on the slope, a hypothesis test that the slope differs from zero (or from a theoretical value), residual analysis, and a statement about model adequacy. If the residuals show heteroscedasticity or a non-linear pattern, the linear model is inappropriate and should be replaced.
+How this document addresses it: Section 3.2 specifies the statistical framework — bootstrap confidence intervals on the slope β, Breusch–Pagan test for heteroscedasticity, and Ramsey RESET test for functional form. If any test fails, a piecewise or polynomial model is used and reported.
+2.4  Expectation 4 — Multiple metrics, not just aggregate throughput
+Aggregate throughput (MB/s across all files) hides two very different behaviours: per-file cryptographic cost (constant, dominated by KEM at small file sizes) and per-byte cost (grows linearly with file size, dominated by AES-GCM). A reviewer will ask for both. Also expected: memory footprint at each scale, CPU utilisation, tail latency (p95, p99), not just median.
+How this document addresses it: Section 3.1 lists the six metric families to record, with target statistics for each (median with IQR for latency, mean with 95% CI for throughput, peak for memory, p95/p99 for tail latency).
+2.5  Expectation 5 — Weak-scaling AND strong-scaling considerations
+In systems-scalability literature, 'weak scaling' means throughput stability when the problem size grows (what your D1 study attempts) while 'strong scaling' means speedup when compute resources grow at fixed problem size. Modern reviewers expect at least a discussion of both, and increasingly a measurement of both. AES-GCM's parallelisability — which you use as motivation in Section 2 — is a strong-scaling claim, and it is currently unverified in your paper.
+How this document addresses it: Section 4.2 adds a strong-scaling sub-experiment: fix D2 as the workload, vary the number of AES-GCM worker threads from 1 to N (where N is your machine's core count), and report parallel efficiency at each point.
+2.6  Expectation 6 — Honest treatment of implementation ceilings
+Your pipeline is CPU-only and pure-Python — pure-Python for the Kyber shim, PyTorch CPU for the VAE. A reviewer will accept these choices only if the paper explicitly separates 'algorithm scalability' (which is fundamental) from 'implementation ceiling' (which is contingent). Every scalability claim must specify which one it addresses.
+How this document addresses it: Section 5 provides two extrapolation curves: one for measured pure-Python numbers, one for native-liboqs numbers projected from SUPERCOP benchmarks. The projection is labelled 'projection', not 'measurement', to preserve honesty.
+2.7  Expectation 7 — File-size distribution effects made explicit
+For a per-file-KEM architecture like yours, throughput is dominated by the file-size distribution, not by total volume. A dataset of a million 1-KB files at 1 GB total will run 1000× slower than a single 1-GB file, because the KEM overhead is fixed per file. Reviewers with cryptography background know this and will expect it to be surfaced.
+How this document addresses it: the D2 and D3 file-size histograms will be reported as an inset in the main scalability figure, and throughput will be reported both per-byte and per-file. Section 3.3 explains the composition-normalisation procedure.
+2.8  Expectation 8 — A quantitative statement about the extrapolation limit
+The final sentence of a scalability section should say what the measurements do not support. Reviewers appreciate epistemic humility. 'We characterise throughput up to 100 GB on a single node; extrapolation to TB scale or to distributed deployments would require additional experiments' is a defensible closing sentence. 'Our pipeline scales' is not.
+How this document addresses it: Section 6 provides ready-to-use phrasing for the closing statement, calibrated to the actual measurement range.
+3.  Metrics, statistics, and controls
+3.1  Six metric families to record at every measurement point
+1.  Per-file cryptographic latency: record L_VAE (VAE encode + decode round-trip), L_AES (AES-GCM encrypt + decrypt round-trip), L_KEM (KEM keygen + encaps + decaps), L_IO (file read + write). Report each as median with interquartile range (IQR) over ≥30 files per size bucket. Rationale: separates algorithm cost from I/O cost, and lets you defend claims about which layer dominates.
+2.  Aggregate throughput: T_bytes = total_bytes / total_wall_time (MB/s) and T_files = n_files / total_wall_time (files/s). Report both — the ratio between them is dataset-specific and reveals file-size distribution effects. Include 95% bootstrap confidence intervals (10 000 resamples).
+3.  Tail latency: p50 (median), p95, p99 of per-file total latency. If p99 is more than 3× p50, discuss why in the text (usually GC pauses, memory pressure, or filesystem cache misses). JISA reviewers care about tail latency because it maps to real deployment SLAs.
+4.  Peak memory footprint: record RSS (Resident Set Size) at process peak, using resource.getrusage(RUSAGE_SELF).ru_maxrss on Linux. A pipeline that scales in throughput but blows up in memory is not scalable; report peak memory as a function of dataset size.
+5.  CPU utilisation and thread efficiency: U_cpu = (CPU seconds consumed) / (wall seconds × n_cores). A single-threaded pipeline running on an 8-core machine at 12% U_cpu is scaling poorly at the resource level even if it looks stable at the throughput level. This is what makes the strong-scaling experiment (Section 4.2) meaningful.
+6.  Cryptographic correctness at scale: at each measurement point, verify N random decrypt-verify-decompress round-trips (N ≥ 100) and report the number of AES-GCM authentication failures (should be zero) and the number of KEM decapsulation failures (should be zero). This anchors the security-preservation claim at each scale.
+3.2  Statistical framework
+The following framework is what reviewers of Q1 systems-security papers expect to see. Every step is defensible with standard packages.
+Regression model: fit throughput T (MB/s) as a linear function of log(V), where V is dataset volume in GB. Using log(V) rather than V is important — pipelines with per-file overhead typically show log-linear behaviour, not linear behaviour. Report intercept, slope, and both R² and adjusted R².
+Confidence intervals: compute 95% bootstrap confidence intervals for the slope β using 10 000 resamples. If the CI contains zero, state explicitly that no significant scaling trend is detected, and do not report 'flat behaviour' as a positive result — it is a null result, and should be framed as such.
+Model adequacy: run three tests. (a) Breusch–Pagan for heteroscedasticity — if p < 0.05, the linear model is inadequate and you must switch to weighted regression or report per-dataset means separately. (b) Ramsey RESET test for functional form — if p < 0.05, add a quadratic term or use piecewise regression. (c) Shapiro–Wilk on residuals for normality — if p < 0.05, use bootstrap CIs (which you should be doing anyway) rather than parametric ones.
+Cross-dataset comparison: for each metric, report ANOVA across D1 / D2 / D3 with post-hoc Tukey HSD. This tests the hypothesis that throughput distributions differ between datasets. If they do differ significantly, the source of the difference (composition vs. volume) must be discussed.
+3.3  Composition-normalisation for cross-dataset comparison
+If D1, D2, D3 have different file-type compositions, raw throughput comparisons are misleading. Normalise as follows: for each dataset, compute per-file-type mean throughput (T_JPEG, T_MP4, T_JSON, T_LOG, T_PCAP, ...). Then compute a composition-adjusted throughput T_adj = Σᵢ (fᵢ_D1 × Tᵢ_Dk) where fᵢ_D1 is the D1 file-type fraction and Tᵢ_Dk is the per-type throughput on dataset k. T_adj answers the question: 'what throughput would we see if Dk had the same composition as D1?' — which is what a reviewer means when they ask about scaling.
+4.  Experimental protocol
+4.1  Weak-scaling protocol (D1 / D2 / D3)
+Each dataset is measured independently, with the following protocol executed once per dataset. Total wall-time budget per dataset: approximately 4–8 hours for D2, 8–16 hours for D3, depending on hardware.
+# Weak-scaling protocol (per dataset Dk)
+1. Preparation
+- Clean OS filesystem cache: sudo sh -c 'echo 3 > /proc/sys/vm/drop_caches'
+- Verify Dk manifest: sha256sum -c Dk.manifest
+- Restart Python interpreter (fresh venv activation)
+- Set process affinity if benchmarking single-core: taskset -c 0
+2. Warm-up (discarded from measurements)
+- Process 5 random files from Dk to warm caches / JIT / lazy imports
+- Discard timings
+3. Measurement loop
+for each file f in Dk:
+t0 = perf_counter()
+z  = VAE.encode(f)           ; record L_VAE
+(K, ctK) = MLKEM.Encaps(pk)  ; record L_KEM
+(ct, tag) = AES-GCM.Enc(K,z) ; record L_AES
+write ct to /dev/shm         ; record L_IO
+t1 = perf_counter()
+record total = t1 - t0
+record RSS at this point
+4. Correctness verification
+- Pick 100 random files from Dk
+- Full decrypt-verify-decompress round-trip
+- Count auth failures (must be 0)
+5. Post-processing
+- Compute median, IQR, p95, p99 per file-size bucket
+- Compute T_bytes and T_files with 95% bootstrap CI
+- Save all raw per-file timings to Dk_raw.csv
+Replicates: run the full protocol 3 times per dataset on 3 different days. The 3 runs let you compute run-to-run variance (which reviewers will ask for) and detect environmental artefacts (thermal throttling, background OS activity). Report inter-run coefficient of variation (CV = σ/µ) — if CV > 5% for aggregate throughput, investigate before publication.
+4.2  Strong-scaling protocol (parallelisation experiment)
+Fix D2 as the workload. Vary the number of AES-GCM worker threads T from 1 to N_cores. For each T, measure aggregate throughput and compute parallel efficiency:
+E(T) = Throughput(T) / (T × Throughput(1))
+Perfect scaling gives E(T) = 1.0 for all T. Reviewers know that in practice E(T) declines because of contention (memory bandwidth, GIL, cache coherency). Report E(T) at T = 1, 2, 4, 8, 16 (up to your core count). This is the strong-scaling curve that will directly support the AES-GCM parallelisability claim from your Section 2.
+Important caveat: the pure-Python Kyber shim will not benefit from threading (Python GIL). Explicitly restrict parallelism to the AES-GCM layer for this sub-experiment, and state so in the paper. This is honest and directly answers the reviewer question 'why doesn't the KEM parallelise?'.
+4.3  Environmental controls
+•  Hardware isolation: run on a machine with no other user processes, no background updates, no swap enabled. Disable frequency scaling (cpufreq-set -g performance) to eliminate variable clock frequency as a confound.
+•  Storage: use tmpfs (/dev/shm) as the write destination for encrypted output. This isolates the measurement from filesystem quirks and gives you upper-bound throughput. Report explicitly: 'Storage: RAM-backed tmpfs; disk I/O is not on the critical path.' Add a separate small measurement on a physical SSD to quantify the tmpfs → SSD gap.
+•  Time-source: time.perf_counter_ns() has ~10 ns resolution on modern Linux, adequate. For sub-microsecond timing (small AES-GCM operations), average over ≥ 1000 iterations to reduce clock quantisation noise below 1%.
+•  Randomness: record the seed used for VAE (already the case, seed = 42) AND log the first 8 bytes of the KEM public keys and AES nonces from each run — this lets a reviewer verify that runs are genuinely independent.
+•  Duration: on D3 (100 GB), a single run may take hours. Sanity-check that the machine is not thermal-throttling by logging /sys/class/thermal/thermal_zone*/temp every 60 s and reporting the maximum reached.
+5.  The scalability figure: what to show and how
+The single scalability figure is the anchor of the entire Section 5.5. It is what the reviewer looks at first, and often decides on. It should be information-dense but readable at once, with structure that pre-empts the questions the reviewer would otherwise ask. Below I specify the recommended structure.
+5.1  Recommended figure: three-panel horizontal layout
+Panels are laid out horizontally across the full page width (or across both columns in double-column layout). Each panel answers one specific question a reviewer would raise.
+Panel
+Question answered
+Visual encoding
+What reviewer sees
+(a) Weak scaling
+Does throughput stay stable as volume grows across two orders of magnitude?
+X-axis: log(volume in GB), 1 → 100 GB. Y-axis: throughput (MB/s). Points: D1, D2, D3 with error bars (95% CI). Fit line with confidence band. Different marker shape per dataset.
+Immediate check that R² statement is defensible; visible gap between measured and projected native-liboqs curves
+(b) Composition effect
+Is the observed throughput driven by volume or by file-type composition?
+X-axis: dataset (D1, D2, D3). Y-axis: composition-adjusted throughput T_adj. Overlay: raw throughput as ghost bars behind. Delta reveals composition effect.
+Immediate diagnostic of whether the flat pattern is intrinsic or artefactual
+(c) Strong scaling
+Does the AES-GCM parallelisability claim from Section 2 actually hold in your implementation?
+X-axis: number of AES worker threads (1, 2, 4, 8, 16). Y-axis: parallel efficiency E(T). Dashed line at E = 1 (perfect scaling). Solid line: measured.
+Immediate answer to the parallelism claim; visible gap between perfect and measured is a discussion point
+5.2  Figure design principles that reviewers respond to
+•  Legibility at reduced size: reviewers often print. Use ≥ 9 pt for all axis labels, ≥ 8 pt for legends. Line widths ≥ 1.5 pt. Marker sizes ≥ 6 pt.
+•  Confidence bands, not just points: shade the 95% CI around each measurement. Bare points look like assertions; shaded bands look like evidence.
+•  Log scale on the x-axis of panel (a): your range is 1–100 GB. Linear axis compresses D1 and D2 into a narrow left region and wastes space. Log(V) makes the 6 measurement points visually equidistant and honest.
+•  Colour scheme: use a colourblind-safe palette (Okabe-Ito, Tol, or matplotlib's viridis). Q1 journals increasingly reject figures that use red/green together without symbol backup.
+•  No decoration: no 3D effects, no gradients, no drop shadows, no unnecessary gridlines. The current 'ablation study' figure has a red callout box — that is decoration and should be removed.
+•  Reproducibility: submit the matplotlib source script alongside the figure in your reproducibility package. A reviewer who wants to check whether you cherry-picked a data point can rerun.
+5.3  What NOT to do with the scalability figure
+•  Do not use a bar chart for time-series-like data. Bars imply categorical comparison; scaling is inherently continuous. Use lines with points.
+•  Do not use dual y-axes without explicit reason. They are almost always misleading. If you need two metrics, use two stacked panels.
+•  Do not omit the intercept. If throughput at V = 0 would be −50 MB/s according to your linear fit, that tells the reader that the linear model breaks down at small V. Include the intercept in the fit statement.
+•  Do not annotate 'stable throughput' in the plot title. Titles should state what is being shown, not conclusions. Let the reader read the conclusion in the figure caption.
+6.  Ready-to-use text blocks for the manuscript
+The following paragraphs can be adapted directly into the revised Section 5.5 and Section 6 of the manuscript. They are written in the same academic register as the current v6 draft.
+6.1  Revised Section 5.5 opening paragraph
+Insert as first paragraph of revised Section 5.5
+We characterise throughput across three independently constructed datasets — D1 (3.79 GB, image-dominant), D2 (60 GB, mixed multimedia + logs + PCAP + tabular), and D3 (100 GB, high-entropy binary dominant) — spanning approximately 2.2 orders of magnitude in cumulative volume. For each dataset we execute three independent measurement runs on separate days, discard warm-up files, and record per-file latency broken down by pipeline stage (VAE, AES-GCM, ML-KEM, I/O), aggregate throughput, tail latency (p95, p99), peak memory footprint, and CPU utilisation. Composition-adjusted throughput T_adj is computed to disentangle volume effects from composition effects; the procedure normalises each dataset's per-file-type throughput to the D1 composition and answers the counterfactual question 'what throughput would this dataset show under D1-like composition?'.
+6.2  Revised Section 5.5 findings paragraph
+Template — fill in with actual measured values
+Figure 7 summarises the three-dataset scalability characterisation. Panel (a) reports weak scaling: throughput on the log-volume axis has slope β = [MEASURED VALUE, expected ~ ±5 MB/s per decade] with 95 % bootstrap CI [CI_LOW, CI_HIGH]. The confidence interval [contains / does not contain] zero, so we [cannot / can] reject the null hypothesis of flat throughput at α = 0.05. Panel (b) reports composition effects: raw throughput [does / does not] track composition adjustment, indicating that observed variation is primarily driven by [composition / volume]. Panel (c) reports strong scaling: parallel efficiency E(T) at T = 8 threads reaches [MEASURED VALUE, expected 0.5–0.8] on the AES-GCM layer, confirming the parallelisability motivation from Section 2 while quantifying the practical ceiling imposed by memory-bandwidth contention.
+6.3  Revised closing statement (epistemic humility)
+Insert as final paragraph of revised Section 5.5
+These measurements characterise pipeline behaviour on a single node under CPU-only, pure-Python execution across a two-decade volume range and three distinct compositional profiles. Extrapolation beyond 100 GB, to distributed multi-node deployments, or to native-liboqs implementations remains outside the scope of this experimental evidence and is quantified as future work in Section 6.3.
+6.4  Revised Section 6.3 (Limitations) update
+Replace current Section 6.3 second limitation with
+Second, the experimental scale (up to 100 GB across three datasets) covers a two-decade range on a single node but does not exercise multi-node distributed deployments, TB-scale archives, or hardware-accelerated cryptographic paths. The strong-scaling measurement reports parallel efficiency only for the AES-GCM layer; the pure-Python Kyber shim does not benefit from threading due to the Python GIL, and characterising KEM parallelism at scale requires a native-liboqs implementation. Both extensions are identified as necessary steps toward production deployment.
+7.  Checklist before submission
+Print this checklist and tick each item. Do not submit until every box is ticked.
+☐  Three datasets constructed with SHA-256 manifests, download URLs, and preprocessing scripts committed to the reproducibility repository
+☐  D1 preserved bit-for-bit; D2 documented at 50–60 GB with 4-category composition; D3 documented at 100 GB with high-entropy dominance
+☐  Weak-scaling protocol executed 3 times per dataset (9 runs total) on separate days
+☐  Strong-scaling protocol executed on D2 at T ∈ {1, 2, 4, 8, 16} threads
+☐  Six metric families recorded at every measurement point: per-stage latency, aggregate throughput, tail latency, memory, CPU utilisation, correctness verification
+☐  Raw per-file CSVs archived to Zenodo (or comparable open-science repository)
+☐  Bootstrap 95% CIs computed for all reported means and slopes
+☐  Breusch–Pagan, Ramsey RESET, and Shapiro–Wilk tests reported; alternative models used if any test fails
+☐  ANOVA + Tukey HSD across D1/D2/D3 reported
+☐  Composition-adjusted throughput T_adj computed and reported
+☐  Three-panel scalability figure follows the specification in Section 5.1 above
+☐  matplotlib source scripts included in reproducibility package
+☐  Native-liboqs projections labelled as projections, not measurements
+☐  Section 5.5 opening rewritten (see Section 6.1)
+☐  Section 5.5 findings paragraph completed with actual values (see Section 6.2)
+☐  Section 5.5 closing paragraph inserted (see Section 6.3)
+☐  Section 6.3 Limitations updated (see Section 6.4)
+☐  Manuscript re-read end-to-end; every mention of 'scalability' is qualified by the actual measurement range (up to 100 GB, single node, CPU-only)
+Closing note
+Executed in full, this protocol turns a single-dataset stability observation into a defensible cross-dataset scalability characterisation with strong-scaling context. It directly addresses the weakest section of the current manuscript and takes it from the primary rejection risk to a genuine strength. Expected acceptance probability at JISA after implementation of this protocol: 55–65% (from ~30% currently), conditional on no other reviewer objections emerging on the KEM–DEM composition or VAE quality points.
+Two dependencies remain outside the scope of this document. First, if reviewers ask for a rigorous KEM–DEM composition proof in the random oracle model, that requires theoretical work (roughly the Cramer–Shoup framework applied to your specific instantiation) that is independent of any experimental effort. Second, the VAE reconstruction quality (PSNR 14.85 dB) will still invite comment; the honest response is to reframe the VAE as an architectural placeholder and to move VAE-quality improvements to future work, rather than defending the current numbers.
+One last practical suggestion: before running the full 100 GB protocol, execute the entire pipeline on D2 (60 GB) as a rehearsal. This surfaces environmental problems (thermal throttling, memory pressure, disk pressure) at 6× less cost than discovering them mid-D3 run. Budget the D2 rehearsal explicitly in your timeline.

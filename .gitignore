@@ -1,0 +1,41 @@
+# Virtual environments
+venv/
+venv_win/
+.venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Trained models / large binaries
+*.pt
+*.pth
+*.onnx
+
+# Results and generated artifacts
+results/
+results.zip
+
+# User data (real files — never commit)
+data/user_data/
+
+# Vendored external suites / large test-vector trees (not project source)
+data/supercop/
+data/nist_vectors/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# liboqs build outputs
+*.dll
+*.so
+*.dylib

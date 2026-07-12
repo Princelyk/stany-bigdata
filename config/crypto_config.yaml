@@ -1,0 +1,43 @@
+# =============================================================================
+# Configuration des implémentations cryptographiques
+# Conforme NIST standards
+# =============================================================================
+
+aes:
+  mode: GCM
+  key_size: 256  # bits
+  iv_size: 96    # bits (recommandé NIST SP 800-38D)
+  tag_size: 128  # bits
+  standard: "NIST FIPS 197 + SP 800-38D"
+  urls:
+    - "https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197.pdf"
+    - "https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-38d.pdf"
+
+ml_kem:
+  algorithm: Kyber
+  security_level: 1024  # ML-KEM-1024
+  standard: "NIST FIPS 203"
+  key_sizes:
+    public_key: 1568   # bytes
+    secret_key: 3168   # bytes
+    ciphertext: 1568   # bytes
+  urls:
+    - "https://csrc.nist.gov/pubs/fips/203/final"
+    - "https://pq-crystals.org/kyber/"
+
+implementations:
+  aes_gcm: "cryptography.hazmat"
+  ml_kem: "liboqs"
+  
+test_vectors:
+  aes: "data/nist_vectors/aes/"
+  gcm: "data/nist_vectors/gcm/"
+  ml_kem: "data/nist_vectors/ml-kem/"
+
+benchmarks:
+  repetitions: 10
+  data_sizes_mb: [1, 10, 50, 100, 500, 1000]
+  
+security:
+  nist_level: 5  # Équivalent AES-256
+  quantum_safe: true
