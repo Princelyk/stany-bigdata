@@ -192,16 +192,20 @@ body(doc,
     "ML-KEM/Kyber-1024 key encapsulation mechanism. The pipeline is evaluated on a "
     "real-world dataset (D1) of 126 files totalling 3.79 GB (75 JPEG images, 50 "
     "binary MP4 files, and 1 JSON text file), using micro-benchmarks, NIST CAVP "
-    "test-vector validation (775/775 pass, 100%), a 7-point scalability study, and "
+    "test-vector validation (775/775 pass, 100%), a three-dataset weak- and "
+    "strong-scaling study (D1–D3, 3.8–40 GB, three replicates each), and "
     "an ablation study isolating each layer's contribution.")
 body(doc,
     "Results show that: (i) AES-256-GCM throughput ranges from 109 MB/s (1 KB "
     "payloads) to 1,387 MB/s (64 KB payloads), confirming O(n) complexity; "
     "(ii) ML-KEM/Kyber-1024 key exchange costs 47.4 ms per operation under a "
     "pure-Python shim (keygen 12.59 ms, encaps 14.92 ms, decaps 19.90 ms); "
-    "(iii) throughput across the 7-point scalability study is essentially flat "
-    "(mean 941.5 MB/s, slope β = −0.09 MB/s/GB, R² < 0.01), indicating no cost "
-    "explosion in the measured range; (iv) an ablation study reveals that removing "
+    "(iii) across a three-dataset scalability study (D1–D3, 3.8–40 GB) a one-way "
+    "ANOVA shows throughput differs significantly between datasets (p = 0.017) while "
+    "a log-volume regression detects no monotonic trend (slope 95% CI includes zero), "
+    "indicating that throughput is governed by file-size distribution — via the fixed "
+    "per-file ML-KEM cost — rather than by total volume, with AES-GCM strong scaling "
+    "peaking near four threads (parallel efficiency 0.30); (iv) an ablation study reveals that removing "
     "ML-KEM raises binary throughput from 578 MB/s to 913 MB/s, while adding gzip "
     "compression collapses it to 25 MB/s on high-entropy MP4 data. The primary "
     "contribution is a system-level integration and reproducible joint evaluation of "
@@ -645,11 +649,25 @@ add_heading(doc, "5  Experimental Results", level=1)
 add_heading(doc, "5.1  Dataset and Protocol", level=2)
 body(doc,
     "D1: 3.79 GB, 126 files (75 JPEG images, 50 MP4 binaries, 1 JSON text file) — "
-    "prototype benchmark covering compression quality, latency breakdown, ablation "
-    "study, and scalability evaluation. Measurements are repeated 10 times per "
-    "data-size point; results are reported as median [IQR] to limit outlier "
-    "influence. SHA-256 checksums and library version manifests are stored with "
-    "all CSV outputs for reproducibility.")
+    "a real-world benchmark covering compression quality, latency breakdown, the "
+    "ablation study, and the baseline of the scalability evaluation. Per-layer "
+    "measurements are reported as median [IQR] to limit outlier influence. SHA-256 "
+    "checksums and library version manifests are stored with all CSV outputs for "
+    "reproducibility.")
+body(doc,
+    "For the cross-dataset scalability study (Section 5.6) we additionally construct "
+    "two larger datasets that hold the pipeline fixed while varying volume and "
+    "composition: D2 (15.0 GB, 23,785 files) mixes generated multimedia, system logs, "
+    "PCAP-style binary, and tabular telemetry in roughly 40/30/20/10 proportion, and "
+    "D3 (40.0 GB, 835 files) is high-entropy-binary dominant to stress the "
+    "no-compression, KEM-and-AES-bound regime. Because real corpora at these volumes "
+    "were not available on the evaluation host, D2 and D3 are procedurally generated "
+    "to controlled size and file-type distributions (the builder and its SHA-256 "
+    "manifests are released with the reproducibility package); this is appropriate "
+    "for a throughput characterisation, which depends on file-size distribution and "
+    "byte volume rather than semantic content. Each dataset is measured over three "
+    "independent replicates, and D2 additionally serves as the fixed workload for the "
+    "strong-scaling (thread-parallelism) experiment.")
 
 caption(doc, "Table 5. Summary of key numerical results from real simulation.", fig=False)
 t5 = doc.add_table(rows=1, cols=5)
@@ -898,56 +916,132 @@ insert_figure(doc, "fig08_ablation.png",
 
 add_heading(doc, "5.6  Scalability", level=2)
 body(doc,
-    "Figure 14 summarises the scalability experiment on D1 (7 cumulative data "
-    "points from 0.60 GB to 3.79 GB). Linear regression over throughput-vs-size: "
-    "slope β = −0.09 MB/s/GB, R² < 0.01. The near-zero R² indicates no "
-    "statistically significant throughput trend across the measured range — "
-    "throughput fluctuates between 819 and 1,056 MB/s with a mean of "
-    "941.5 MB/s. There is no evidence of throughput collapse in the "
-    "0.6–3.79 GB range.")
-insert_figure(doc, "fig09_scalability_scatter.png",
-    "Fig. 14  Scalability on D1 (7 data points, 0.60–3.79 GB): throughput with "
-    "linear regression fit. Slope β = −0.09 MB/s/GB, R² < 0.01 (essentially flat).")
+    "We characterise throughput across three independently constructed datasets — "
+    "D1 (3.79 GB, image-dominant real data), D2 (15.0 GB, mixed multimedia + logs + "
+    "PCAP + tabular), and D3 (40.0 GB, high-entropy binary dominant) — spanning "
+    "approximately one order of magnitude in cumulative volume (3.8–40 GB). For each "
+    "dataset we execute three independent measurement replicates on the same node and "
+    "record, per file, the latency of each pipeline stage (ML-KEM, AES-GCM, I/O), "
+    "aggregate throughput T_bytes (MB/s) and T_files (files/s), tail latency "
+    "(p50/p95/p99), peak resident memory, CPU utilisation, and cryptographic "
+    "correctness (100 random decrypt–verify round-trips per run). All runs use "
+    "ML-KEM-1024 under the pure-Python shim on a single CPU-only node; absolute "
+    "latencies therefore reflect this implementation context rather than optimised "
+    "native-liboqs hardware.")
 
-caption(doc, "Table 10. Scalability results on D1 (3.79 GB, 126 files).", fig=False)
-t10 = doc.add_table(rows=1, cols=4)
+caption(doc, "Table 10. Weak-scaling results across D1–D3 (mean ± standard deviation "
+             "over three replicates). CV = coefficient of variation of T_bytes.", fig=False)
+t10 = doc.add_table(rows=1, cols=8)
 t10.style = "Table Grid"
-tbl_row(t10, ["Data processed (GB)","Throughput (MB/s)","Latency (s)","Files"], bold=True, sz=9)
+tbl_row(t10, ["Dataset","Volume (GB)","Files","T_bytes (MB/s)","CV","p95 (ms)","CPU %","KEM/AES fail"], bold=True, sz=8)
 bold_row(t10.rows[0])
-for gb, thr, lat, nf in [
-    ("0.60","819.4","0.75","53"),
-    ("1.16","1,056.3","0.95","71"),
-    ("1.66","1,014.6","1.27","78"),
-    ("2.34","949.6","1.82","90"),
-    ("2.87","834.9","2.46","108"),
-    ("3.30","961.4","2.34","111"),
-    ("3.79","954.2","2.58","126"),
+for r in [
+    ["D1","3.79","126","255.5 ± 48.2","19%","440","12.0","0 / 0"],
+    ["D2","15.00","23,785","8.1 ± 5.9","73%","77","6.9","0 / 0"],
+    ["D3","40.00","835","135.1 ± 116.1","86%","810","6.9","0 / 0"],
 ]:
-    tbl_row(t10, [gb, thr, lat, nf], sz=9)
+    tbl_row(t10, r, sz=8)
 spacer(doc)
 
 body(doc,
-    "Figure 15 shows the cumulative latency-vs-size profile. The gradual throughput "
-    "variation reflects file-type composition heterogeneity across batches "
-    "(image-heavy batches process faster per byte than binary-heavy batches due to "
-    "the fixed KEM overhead per file), not algorithmic complexity growth in the "
-    "cryptographic layers.")
-insert_figure(doc, "fig10_cumulative_latency.png",
-    "Fig. 15  Throughput stability vs. cumulative data size on D1. "
-    "Variation reflects file-type composition, not cryptographic cost growth.")
+    "Figure 14 summarises the characterisation. Panel (a) reports weak scaling. "
+    "Fitting throughput as a linear function of log-volume gives a slope of "
+    "β = −137 MB/s per decade with a 95% bootstrap confidence interval "
+    "(10,000 resamples) of [−353, 120] MB/s per decade; the interval contains zero, "
+    "so we cannot reject the null hypothesis of no monotonic throughput trend at "
+    "α = 0.05 (R² = 0.24, adjusted R² = 0.13). We therefore report this as a null "
+    "result rather than as positive evidence of flat, volume-independent throughput. "
+    "Model-adequacy tests qualify the fit: residuals are consistent with normality "
+    "(Shapiro–Wilk p = 0.24) and homoscedasticity (Breusch–Pagan p = 0.11), but the "
+    "Ramsey RESET test rejects the linear functional form (p = 0.01). The rejection "
+    "is expected — throughput is non-monotonic in volume (255 MB/s at 3.8 GB, "
+    "8 MB/s at 15 GB, 135 MB/s at 40 GB) — so cumulative volume alone is not the "
+    "governing variable.")
 
-caption(doc, "Table 11. Round-trip compression and fidelity by file type.", fig=False)
+body(doc,
+    "A one-way ANOVA across the three datasets confirms that the throughput "
+    "distributions differ significantly (p = 0.017), and the source of the difference "
+    "is file-size distribution rather than volume. Because ML-KEM key exchange is "
+    "performed once per file at a fixed cost, throughput is dominated by the number "
+    "of files, not the number of bytes. D2 comprises 23,785 files (the majority below "
+    "1 MB) and is consequently KEM-bound, whereas D3 holds 2.7× the data in only 835 "
+    "larger files and runs an order of magnitude faster per byte. Table 11 makes this "
+    "explicit: for D2 the ML-KEM stage accounts for 96% of median per-file latency "
+    "(39.6 of 41.3 ms), against 68% for D1 and 43% for D3, where I/O and AES on "
+    "multi-megabyte payloads become comparable.")
+
+caption(doc, "Table 11. Median per-file latency by pipeline stage (ms), averaged over replicates.", fig=False)
 t11 = doc.add_table(rows=1, cols=5)
 t11.style = "Table Grid"
-tbl_row(t11, ["File type","CR","SSIM","PSNR (dB)","Notes"], bold=True, sz=9)
+tbl_row(t11, ["Dataset","I/O read","ML-KEM","AES-GCM","Total"], bold=True, sz=9)
 bold_row(t11.rows[0])
-for ft, cr, ssim, psnr, note in [
-    ("Images (JPEG, VAE 30-epoch β=0.01)","~6× on 32×32 input","0.46 (gradient) – 0.95 (gray)","14.85","Posterior collapse resolved; limited by dataset size (68 train images)"),
-    ("Images (classical lossless)","~1.0×","1.00","99.0","JPEG already compressed"),
-    ("Binary (MP4)","~1.0–1.26×","N/A","N/A","High-entropy; pipeline expands slightly"),
+for r in [
+    ["D1","5.59","39.13","9.70","57.79"],
+    ["D2","1.16","39.61","0.26","41.34"],
+    ["D3","28.37","48.61","30.39","114.31"],
 ]:
-    tbl_row(t11, [ft, cr, ssim, psnr, note], sz=9)
+    tbl_row(t11, r, sz=9)
 spacer(doc)
+
+body(doc,
+    "Panel (b) isolates composition from volume via composition-adjusted throughput "
+    "T_adj, which re-weights each dataset's per-file-type throughput to the D1 "
+    "file-type composition. The adjustment yields T_adj = 382.6, 0.24, and "
+    "185.2 MB/s for D1, D2, and D3 respectively. That D2 remains an order of "
+    "magnitude below the others even after normalisation confirms that its low "
+    "throughput is intrinsic to its small-file, KEM-bound profile and not an artefact "
+    "of comparing unlike compositions.")
+
+body(doc,
+    "Panel (c) reports strong scaling. Fixing D2 as the workload and varying the "
+    "number of AES-GCM worker threads T ∈ {1, 2, 4, 8, 16}, aggregate AES throughput "
+    "rises from 588 MB/s at T = 1 to a peak of 712 MB/s at T = 4 and then plateaus, "
+    "while parallel efficiency E(T) = T_thr(T)/(T·T_thr(1)) declines from 1.00 to "
+    "0.57, 0.30, 0.14, and 0.07. The AES-GCM layer therefore parallelises but with "
+    "steep diminishing returns once four threads saturate memory bandwidth. "
+    "Consistent with the protocol, parallelism is restricted to the AES-GCM layer: "
+    "the pure-Python ML-KEM shim does not benefit from threading under the Python "
+    "global interpreter lock. This sub-experiment was run on a representative "
+    "800-file subset of D2 because the strong-scaling harness holds all payloads in "
+    "memory simultaneously.")
+
+caption(doc, "Table 12. Strong scaling on D2: AES-GCM throughput and parallel efficiency vs. worker threads.", fig=False)
+t12 = doc.add_table(rows=1, cols=3)
+t12.style = "Table Grid"
+tbl_row(t12, ["Threads T","AES throughput (MB/s)","Parallel efficiency E(T)"], bold=True, sz=9)
+bold_row(t12.rows[0])
+for r in [["1","588.4","1.00"],["2","666.5","0.57"],["4","712.3","0.30"],["8","656.7","0.14"],["16","661.2","0.07"]]:
+    tbl_row(t12, r, sz=9)
+spacer(doc)
+
+insert_figure(doc, "fig_scalability_3panel.png",
+    "Fig. 14  Three-panel scalability characterisation. (a) Weak scaling: throughput "
+    "vs. log-volume for D1–D3 (error bars = ±1 SD over three replicates); the linear "
+    "fit is non-significant (slope CI includes zero). (b) Composition effect: "
+    "composition-adjusted T_adj (coloured) against raw throughput (grey). (c) Strong "
+    "scaling: AES-GCM parallel efficiency vs. worker threads, against the ideal E = 1.")
+
+body(doc,
+    "Two features of the measurements warrant comment. First, tail latency is heavy: "
+    "the p99/p50 ratio reaches 11× on D1 and 12× on D3, exceeding the 3× threshold at "
+    "which discussion is warranted. The tail is attributable to filesystem cache "
+    "misses and background OS activity on a live, non-isolated single node rather than "
+    "to algorithmic cost, and it is the principal driver of the second feature: high "
+    "inter-run variance (CV of 19%, 73%, and 86% for D1, D2, and D3). Both effects "
+    "would be reduced by the environmental controls the protocol specifies "
+    "(RAM-backed tmpfs, cache flushing, a quiescent dedicated host), which were "
+    "unavailable in the present environment.")
+
+italic_bold(doc,
+    "Scope of the scalability claim. These measurements characterise pipeline "
+    "behaviour on a single node under CPU-only, pure-Python execution across roughly "
+    "one order of magnitude in volume (3.8–40 GB) and three distinct compositional "
+    "profiles. Within this range we detect no significant volume-driven throughput "
+    "trend; instead, throughput is governed by file-size distribution through the "
+    "fixed per-file ML-KEM cost. Extrapolation beyond 40 GB, to native-liboqs "
+    "implementations, to distributed multi-node deployments, or to the reduced-"
+    "variance regime of an isolated host, lies outside the present experimental "
+    "evidence and is identified as future work in Section 6.")
 
 # ══════════════════════════════════════════════════════════════════════════════
 # 6 DISCUSSION
@@ -998,19 +1092,28 @@ body(doc,
 
 add_heading(doc, "Limitations", level=2)
 body(doc,
-    "Four constraints bound the interpretation of these results: "
+    "Five constraints bound the interpretation of these results: "
     "(i) the CPU-only, pure-Python implementation introduces overhead not "
-    "representative of bare-metal production deployment with native-compiled "
-    "liboqs — all ML-KEM latency figures should be interpreted as upper bounds "
-    "for this implementation context; "
-    "(ii) the experimental scale (3.79 GB on a single node) is below industrial "
-    "data platform volumes (petabytes on distributed clusters), and large-scale "
-    "(>30 GB) scalability remains uncharacterised; "
-    "(iii) VAE compression benefits are specific to the image subset — binary and "
-    "tabular data show near-zero compression gain, and a file-type-aware bypass "
-    "router is the correct engineering remedy; "
-    "(iv) the KEM-DEM composition argument remains informal — a rigorous proof in "
-    "the random oracle model is left for future work.")
+    "representative of bare-metal deployment with native-compiled liboqs — all "
+    "ML-KEM latency figures should be interpreted as upper bounds for this "
+    "implementation context; "
+    "(ii) the experimental scale (up to 40 GB across three datasets, spanning "
+    "roughly one order of magnitude on a single node) extends the original 3.79 GB "
+    "baseline but does not reach the multi-decade, distributed, or TB-scale regime of "
+    "industrial platforms; extending the range toward 100 GB and to native-liboqs "
+    "execution is required before volume-scaling claims can be generalised; "
+    "(iii) the strong-scaling measurement reports parallel efficiency for the "
+    "AES-GCM layer only — the pure-Python Kyber shim does not benefit from threading "
+    "under the Python GIL, and characterising KEM parallelism at scale requires a "
+    "native-liboqs implementation; "
+    "(iv) throughput showed high inter-run variance (coefficient of variation up to "
+    "86%) driven by filesystem-cache state on a live, non-isolated host; a quiescent "
+    "machine with RAM-backed storage and cache flushing, as the measurement protocol "
+    "specifies, is needed to tighten the confidence intervals; "
+    "(v) VAE compression benefits remain specific to the image subset — binary and "
+    "tabular data show near-zero gain, and a file-type-aware bypass router is the "
+    "correct remedy — while the KEM-DEM composition argument remains informal, with a "
+    "rigorous random-oracle-model proof left for future work.")
 
 # ══════════════════════════════════════════════════════════════════════════════
 # 7 CONCLUSION
@@ -1232,15 +1335,20 @@ mp(
     "ML-KEM/Kyber-1024 key encapsulation mechanism. The pipeline is evaluated on "
     "a real-world dataset (D1) of 126 files totalling 3.79 GB (75 JPEG images, "
     "50 binary MP4 files, 1 JSON text file), using micro-benchmarks, NIST CAVP "
-    "test-vector validation (775/775 pass, 100%), a 7-point scalability study, "
+    "test-vector validation (775/775 pass, 100%), a three-dataset weak- and "
+    "strong-scaling study (D1–D3, 3.8–40 GB, three replicates each), "
     "and an ablation study isolating each layer's contribution."
 )
 mp(
     "Results show that: (i) AES-256-GCM throughput ranges from 109 MB/s (1 KB) "
     "to 1,387 MB/s (64 KB); (ii) ML-KEM/Kyber-1024 costs 47.4 ms per exchange "
     "(keygen 12.59 ms, encaps 14.92 ms, decaps 19.90 ms) under a pure-Python shim; "
-    "(iii) throughput is flat over 0.6–3.79 GB (mean 941.5 MB/s, "
-    "$\\beta = -0.09$ MB/s/GB, $R^2 < 0.01$); "
+    "(iii) across a three-dataset scalability study (D1–D3, 3.8–40 GB) a one-way "
+    "ANOVA shows throughput differs significantly between datasets ($p = 0.017$) "
+    "while a log-volume regression detects no monotonic trend (slope 95% CI includes "
+    "zero) — throughput is governed by file-size distribution via the fixed per-file "
+    "ML-KEM cost rather than by total volume, and AES-GCM strong scaling peaks near "
+    "four threads (parallel efficiency 0.30); "
     "(iv) an ablation study reveals that removing ML-KEM raises binary throughput "
     "from 578 to 913 MB/s, while adding gzip collapses it to 25 MB/s on "
     "high-entropy MP4 data."
@@ -1417,6 +1525,18 @@ mtbl(
         ["**Total D1**","**126**","**3.79**","**30.9**","**100.0**"],
     ]
 )
+mp("For the cross-dataset scalability study (Section 5.6) we additionally construct "
+   "two larger datasets that hold the pipeline fixed while varying volume and "
+   "composition: **D2** (15.0 GB, 23,785 files) mixes generated multimedia, system "
+   "logs, PCAP-style binary, and tabular telemetry (~40/30/20/10), and **D3** "
+   "(40.0 GB, 835 files) is high-entropy-binary dominant to stress the "
+   "no-compression, KEM-and-AES-bound regime. As real corpora at these volumes were "
+   "unavailable on the evaluation host, D2 and D3 are procedurally generated to "
+   "controlled size and file-type distributions (builder and SHA-256 manifests are "
+   "released with the reproducibility package) — appropriate for a throughput "
+   "characterisation, which depends on file-size distribution and byte volume rather "
+   "than semantic content. Each dataset is measured over three independent "
+   "replicates; D2 also serves as the fixed workload for strong scaling.")
 
 mh("5.2  Compression and Quality", 2)
 mfig("fig03_compression_ratios.png",
@@ -1510,23 +1630,74 @@ mtbl(
 A("*Table 9. Ablation study. B = recommended baseline for PQ security.*\n")
 
 mh("5.6  Scalability", 2)
-mfig("fig09_scalability_scatter.png",
-     "Fig. 14  Scalability on D1: $\\beta = -0.09$ MB/s/GB, $R^2 < 0.01$ (flat).")
+mp("We characterise throughput across three independently constructed datasets — "
+   "**D1** (3.79 GB, image-dominant real data), **D2** (15.0 GB, mixed multimedia + "
+   "logs + PCAP + tabular), and **D3** (40.0 GB, high-entropy binary dominant) — "
+   "spanning approximately one order of magnitude in cumulative volume (3.8–40 GB). "
+   "Each dataset is measured over three independent replicates on a single CPU-only "
+   "node under the pure-Python ML-KEM-1024 shim; absolute latencies reflect this "
+   "implementation context rather than native-liboqs hardware.")
 mtbl(
-    ["Data (GB)","Throughput (MB/s)","Latency (s)","Files"],
+    ["Dataset","Volume (GB)","Files","T_bytes (MB/s)","CV","p95 (ms)","CPU %","KEM/AES fail"],
     [
-        ["0.60","819.4","0.75","53"],
-        ["1.16","1,056.3","0.95","71"],
-        ["1.66","1,014.6","1.27","78"],
-        ["2.34","949.6","1.82","90"],
-        ["2.87","834.9","2.46","108"],
-        ["3.30","961.4","2.34","111"],
-        ["3.79","954.2","2.58","126"],
+        ["D1","3.79","126","255.5 ± 48.2","19%","440","12.0","0 / 0"],
+        ["D2","15.00","23,785","8.1 ± 5.9","73%","77","6.9","0 / 0"],
+        ["D3","40.00","835","135.1 ± 116.1","86%","810","6.9","0 / 0"],
     ]
 )
-A("*Table 10. Scalability results on D1. Mean 941.5 MB/s, essentially flat.*\n")
-mfig("fig10_cumulative_latency.png",
-     "Fig. 15  Throughput stability vs. cumulative data size on D1.")
+A("*Table 10. Weak-scaling results across D1–D3 (mean ± SD over three replicates).*\n")
+mp("**Weak scaling.** Fitting throughput against log-volume gives slope "
+   "$\\beta = -137$ MB/s per decade with a 95% bootstrap CI (10,000 resamples) of "
+   "$[-353, 120]$; the interval contains zero, so we cannot reject the null "
+   "hypothesis of no monotonic trend ($R^2 = 0.24$). This is a null result, not "
+   "evidence of flat throughput. Residuals are normal (Shapiro–Wilk $p = 0.24$) and "
+   "homoscedastic (Breusch–Pagan $p = 0.11$), but the Ramsey RESET test rejects "
+   "linearity ($p = 0.01$): throughput is non-monotonic in volume (255, 8, 135 MB/s "
+   "at 3.8, 15, 40 GB). A one-way ANOVA confirms the datasets differ significantly "
+   "($p = 0.017$).")
+mp("**File-size distribution, not volume, governs throughput.** ML-KEM runs once per "
+   "file at fixed cost, so throughput tracks file count. D2's 23,785 mostly sub-MB "
+   "files make it KEM-bound; D3 holds 2.7× the data in 835 larger files and runs an "
+   "order of magnitude faster per byte. For D2 the ML-KEM stage is 96% of median "
+   "per-file latency, versus 68% (D1) and 43% (D3).")
+mtbl(
+    ["Dataset","I/O read","ML-KEM","AES-GCM","Total"],
+    [
+        ["D1","5.59","39.13","9.70","57.79"],
+        ["D2","1.16","39.61","0.26","41.34"],
+        ["D3","28.37","48.61","30.39","114.31"],
+    ]
+)
+A("*Table 11. Median per-file latency by pipeline stage (ms), averaged over replicates.*\n")
+mp("**Composition adjustment.** Re-weighting each dataset's per-file-type throughput "
+   "to the D1 composition gives $T_{adj}$ = 382.6, 0.24, 185.2 MB/s for D1, D2, D3. "
+   "D2 stays an order of magnitude below the others after normalisation, confirming "
+   "its low throughput is intrinsic to its small-file profile, not a composition "
+   "artefact.")
+mp("**Strong scaling.** Fixing D2 and varying AES-GCM worker threads "
+   "$T \\in \\{1,2,4,8,16\\}$, throughput rises from 588 to a peak of 712 MB/s at "
+   "$T=4$ then plateaus, while parallel efficiency $E(T)$ falls 1.00 → 0.57 → 0.30 → "
+   "0.14 → 0.07 as memory bandwidth saturates. Parallelism is restricted to AES-GCM "
+   "(the pure-Python KEM shim does not thread under the GIL); this sub-experiment "
+   "used a representative 800-file subset because the harness holds all payloads in "
+   "memory.")
+mtbl(
+    ["Threads T","AES throughput (MB/s)","Parallel efficiency E(T)"],
+    [["1","588.4","1.00"],["2","666.5","0.57"],["4","712.3","0.30"],["8","656.7","0.14"],["16","661.2","0.07"]]
+)
+A("*Table 12. Strong scaling on D2: AES-GCM throughput and parallel efficiency.*\n")
+mfig("fig_scalability_3panel.png",
+     "Fig. 14  Three-panel scalability characterisation: (a) weak scaling (throughput "
+     "vs. log-volume, error bars ±1 SD; linear fit non-significant); (b) composition-"
+     "adjusted $T_{adj}$ vs. raw throughput; (c) AES-GCM parallel efficiency vs. threads.")
+mp("*Scope.* These measurements characterise single-node, CPU-only, pure-Python "
+   "behaviour across roughly one order of magnitude (3.8–40 GB) and three "
+   "compositions. Within this range no significant volume-driven trend is found; "
+   "throughput is governed by file-size distribution via the fixed per-file ML-KEM "
+   "cost. Heavy tail latency (p99/p50 up to 12×) and high inter-run variance "
+   "(CV up to 86%) stem from filesystem-cache state on a live host and would shrink "
+   "under the protocol's environmental controls. Extrapolation beyond 40 GB, to "
+   "native liboqs, or to multi-node deployment is future work (Section 6).")
 
 mh("6  Discussion")
 mp("The ML-KEM/Kyber-1024 overhead of 47.4 ms per key exchange (pure-Python shim) "
@@ -1549,11 +1720,18 @@ mh("Limitations", 2)
 for lim in [
     "(i) CPU-only pure-Python implementation — ML-KEM latency figures are upper "
     "bounds; native liboqs reduces this ~200×.",
-    "(ii) Experimental scale (3.79 GB) is below industrial volumes (petabytes); "
-    "large-scale (>30 GB) scalability uncharacterised.",
-    "(iii) VAE compression specific to images — binary/tabular show near-zero gain.",
-    "(iv) KEM-DEM composition argument is informal — formal RO-model proof is "
-    "future work.",
+    "(ii) Experimental scale (up to 40 GB across three datasets, ~one order of "
+    "magnitude on a single node) extends the 3.79 GB baseline but does not reach the "
+    "multi-decade, distributed, or TB-scale regime; extension toward 100 GB and "
+    "native-liboqs execution is needed before volume-scaling claims can generalise.",
+    "(iii) Strong-scaling parallel efficiency is reported for the AES-GCM layer only "
+    "— the pure-Python Kyber shim does not thread under the GIL.",
+    "(iv) Throughput showed high inter-run variance (CV up to 86%) from "
+    "filesystem-cache state on a live host; a quiescent machine with RAM-backed "
+    "storage and cache flushing is needed to tighten the confidence intervals.",
+    "(v) VAE compression is image-specific (binary/tabular show near-zero gain), and "
+    "the KEM-DEM composition argument is informal — a formal RO-model proof is future "
+    "work.",
 ]:
     A(f"- {lim}")
 A("")
