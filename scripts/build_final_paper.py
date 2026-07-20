@@ -1014,12 +1014,18 @@ for r in [["1","588.4","1.00"],["2","666.5","0.57"],["4","712.3","0.30"],["8","6
     tbl_row(t12, r, sz=9)
 spacer(doc)
 
-insert_figure(doc, "fig_scalability_3panel.png",
-    "Fig. 14  Three-panel scalability characterisation. (a) Weak scaling: throughput "
-    "vs. log-volume for D1–D3 (error bars = ±1 SD over three replicates); the linear "
-    "fit is non-significant (slope CI includes zero). (b) Composition effect: "
-    "composition-adjusted T_adj (coloured) against raw throughput (grey). (c) Strong "
-    "scaling: AES-GCM parallel efficiency vs. worker threads, against the ideal E = 1.")
+insert_figure(doc, "fig_scalability_a_weak.png",
+    "Fig. 14  Weak scaling: throughput vs. log-volume for D1–D3 (error bars = ±1 SD "
+    "over three replicates). The linear fit is non-significant (slope 95% CI includes "
+    "zero); throughput is non-monotonic in volume.", width=4.2)
+insert_figure(doc, "fig_scalability_b_composition.png",
+    "Fig. 15  Composition effect: composition-adjusted throughput $T_{adj}$ (coloured) "
+    "against raw throughput (grey). D2 stays an order of magnitude below D1/D3 even "
+    "after normalisation, confirming its small-file, KEM-bound profile.", width=4.2)
+insert_figure(doc, "fig_scalability_c_strong.png",
+    "Fig. 16  Strong scaling (D2): AES-GCM parallel efficiency $E(T)$ vs. worker "
+    "threads, against the ideal $E = 1$. Efficiency falls steeply as memory bandwidth "
+    "saturates beyond four threads.", width=4.2)
 
 body(doc,
     "Two features of the measurements warrant comment. First, tail latency is heavy: "
@@ -1688,10 +1694,15 @@ mtbl(
     [["1","588.4","1.00"],["2","666.5","0.57"],["4","712.3","0.30"],["8","656.7","0.14"],["16","661.2","0.07"]]
 )
 A("*Table 12. Strong scaling on D2: AES-GCM throughput and parallel efficiency.*\n")
-mfig("fig_scalability_3panel.png",
-     "Fig. 14  Three-panel scalability characterisation: (a) weak scaling (throughput "
-     "vs. log-volume, error bars ±1 SD; linear fit non-significant); (b) composition-"
-     "adjusted $T_{adj}$ vs. raw throughput; (c) AES-GCM parallel efficiency vs. threads.")
+mfig("fig_scalability_a_weak.png",
+     "Fig. 14  Weak scaling: throughput vs. log-volume for D1–D3 (error bars ±1 SD "
+     "over three replicates); the linear fit is non-significant (slope CI includes zero).")
+mfig("fig_scalability_b_composition.png",
+     "Fig. 15  Composition effect: composition-adjusted $T_{adj}$ (coloured) vs. raw "
+     "throughput (grey); D2 stays an order of magnitude below D1/D3 after normalisation.")
+mfig("fig_scalability_c_strong.png",
+     "Fig. 16  Strong scaling (D2): AES-GCM parallel efficiency $E(T)$ vs. worker "
+     "threads, against the ideal $E = 1$.")
 mp("*Scope.* These measurements characterise single-node, CPU-only, pure-Python "
    "behaviour across roughly one order of magnitude (3.8–40 GB) and three "
    "compositions. Within this range no significant volume-driven trend is found; "

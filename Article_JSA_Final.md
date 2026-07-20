@@ -388,9 +388,19 @@ We characterise throughput across three independently constructed datasets — *
 *Table 12. Strong scaling on D2: AES-GCM throughput and parallel efficiency.*
 
 
-![Fig. 14  Three-panel scalability characterisation: (a) weak scaling (throughput vs. log-volume, error bars ±1 SD; linear fit non-significant); (b) composition-adjusted $T_{adj}$ vs. raw throughput; (c) AES-GCM parallel efficiency vs. threads.](results/figures/paper/fig_scalability_3panel.png)
+![Fig. 14  Weak scaling: throughput vs. log-volume for D1–D3 (error bars ±1 SD over three replicates); the linear fit is non-significant (slope CI includes zero).](results/figures/paper/fig_scalability_a_weak.png)
 
-*Fig. 14  Three-panel scalability characterisation: (a) weak scaling (throughput vs. log-volume, error bars ±1 SD; linear fit non-significant); (b) composition-adjusted $T_{adj}$ vs. raw throughput; (c) AES-GCM parallel efficiency vs. threads.*
+*Fig. 14  Weak scaling: throughput vs. log-volume for D1–D3 (error bars ±1 SD over three replicates); the linear fit is non-significant (slope CI includes zero).*
+
+
+![Fig. 15  Composition effect: composition-adjusted $T_{adj}$ (coloured) vs. raw throughput (grey); D2 stays an order of magnitude below D1/D3 after normalisation.](results/figures/paper/fig_scalability_b_composition.png)
+
+*Fig. 15  Composition effect: composition-adjusted $T_{adj}$ (coloured) vs. raw throughput (grey); D2 stays an order of magnitude below D1/D3 after normalisation.*
+
+
+![Fig. 16  Strong scaling (D2): AES-GCM parallel efficiency $E(T)$ vs. worker threads, against the ideal $E = 1$.](results/figures/paper/fig_scalability_c_strong.png)
+
+*Fig. 16  Strong scaling (D2): AES-GCM parallel efficiency $E(T)$ vs. worker threads, against the ideal $E = 1$.*
 
 
 *Scope.* These measurements characterise single-node, CPU-only, pure-Python behaviour across roughly one order of magnitude (3.8–40 GB) and three compositions. Within this range no significant volume-driven trend is found; throughput is governed by file-size distribution via the fixed per-file ML-KEM cost. Heavy tail latency (p99/p50 up to 12×) and high inter-run variance (CV up to 86%) stem from filesystem-cache state on a live host and would shrink under the protocol's environmental controls. Extrapolation beyond 40 GB, to native liboqs, or to multi-node deployment is future work (Section 6).
