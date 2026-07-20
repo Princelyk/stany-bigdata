@@ -1,0 +1,26 @@
+{
+  "n_runs": 9,
+  "datasets": [
+    "D1",
+    "D2",
+    "D3"
+  ],
+  "slope_per_log_gb": -59.39837281150491,
+  "slope_ci95": [
+    -153.35108327224285,
+    52.336678839003824
+  ],
+  "slope_pvalue": 0.18066340309065393,
+  "intercept": 285.9410685033424,
+  "r2": 0.24000117415936992,
+  "adjusted_r2": 0.13142991332499432,
+  "breusch_pagan_pvalue": NaN,
+  "ramsey_reset_pvalue": NaN,
+  "shapiro_pvalue": 0.23601385762128962,
+  "anova_pvalue": 0.016838672531616992,
+  "notes": {
+    "diagnostics_require_statsmodels": false,
+    "tukey_available": false,
+    "baseline_dataset_for_composition_adjustment": "D1"
+  }
+}
