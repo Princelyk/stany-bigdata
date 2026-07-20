@@ -229,17 +229,17 @@ For the cross-dataset scalability study (Section 5.6) we additionally construct 
 ## 5.2  Compression and Quality
 
 
-![Fig. 5  Compression ratios on D1. Classical lossless compressors achieve ≈1× on JPEG/MP4 (already compressed). VAE achieves 6× on resized 32×32 input.](results/figures/figures/fig03_compression_ratios.png)
+![Fig. 5  Compression ratios on D1. Classical lossless compressors achieve ≈1× on JPEG/MP4 (already compressed). VAE achieves 6× on resized 32×32 input.](results/figures/paper/fig03_compression_ratios.png)
 
 *Fig. 5  Compression ratios on D1. Classical lossless compressors achieve ≈1× on JPEG/MP4 (already compressed). VAE achieves 6× on resized 32×32 input.*
 
 
-![Fig. 6  Multi-objective trade-off: compression ratio vs. PSNR vs. throughput.](results/figures/figures/fig_pareto_frontier.png)
+![Fig. 6  Multi-objective trade-off: compression ratio vs. PSNR vs. throughput.](results/figures/paper/fig_pareto_frontier.png)
 
 *Fig. 6  Multi-objective trade-off: compression ratio vs. PSNR vs. throughput.*
 
 
-![Fig. 7  VAE training history (30 epochs, β=0.01): KL rose from ≈10⁻⁵ to 0.05–0.14; best val. PSNR = 15.16 dB at epoch 28. Posterior collapse resolved.](results/figures/figures/fig02_vae_training_history.png)
+![Fig. 7  VAE training history (30 epochs, β=0.01): KL rose from ≈10⁻⁵ to 0.05–0.14; best val. PSNR = 15.16 dB at epoch 28. Posterior collapse resolved.](results/figures/paper/fig02_vae_training_history.png)
 
 *Fig. 7  VAE training history (30 epochs, β=0.01): KL rose from ≈10⁻⁵ to 0.05–0.14; best val. PSNR = 15.16 dB at epoch 28. Posterior collapse resolved.*
 
@@ -266,7 +266,7 @@ For the cross-dataset scalability study (Section 5.6) we additionally construct 
 *Table 6. Median per-layer latency by file type, Pipeline B.*
 
 
-![Fig. 10  AES-256-GCM throughput: 335 MB/s (1 KB) → 1,860 MB/s (64 KB).](results/figures/figures/fig06_aes_microbench.png)
+![Fig. 10  AES-256-GCM throughput: 335 MB/s (1 KB) → 1,860 MB/s (64 KB).](results/figures/paper/fig06_aes_microbench.png)
 
 *Fig. 10  AES-256-GCM throughput: 335 MB/s (1 KB) → 1,860 MB/s (64 KB).*
 
@@ -388,7 +388,7 @@ We characterise throughput across three independently constructed datasets — *
 *Table 12. Strong scaling on D2: AES-GCM throughput and parallel efficiency.*
 
 
-![Fig. 14  Three-panel scalability characterisation: (a) weak scaling (throughput vs. log-volume, error bars ±1 SD; linear fit non-significant); (b) composition-adjusted $T_{adj}$ vs. raw throughput; (c) AES-GCM parallel efficiency vs. threads.](results/figures/fig_scalability_3panel.png)
+![Fig. 14  Three-panel scalability characterisation: (a) weak scaling (throughput vs. log-volume, error bars ±1 SD; linear fit non-significant); (b) composition-adjusted $T_{adj}$ vs. raw throughput; (c) AES-GCM parallel efficiency vs. threads.](results/figures/paper/fig_scalability_3panel.png)
 
 *Fig. 14  Three-panel scalability characterisation: (a) weak scaling (throughput vs. log-volume, error bars ±1 SD; linear fit non-significant); (b) composition-adjusted $T_{adj}$ vs. raw throughput; (c) AES-GCM parallel efficiency vs. threads.*
 
