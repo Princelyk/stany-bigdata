@@ -57,76 +57,93 @@ def main() -> None:
     thr = {ds: agg[ds].t_bytes_mb_s.mean() for ds in DS_ORDER}
     err = {ds: agg[ds].t_bytes_mb_s.std() for ds in DS_ORDER}
 
-    fig, ax = plt.subplots(1, 3, figsize=(11.0, 3.5))
-
-    # ── (a) weak scaling ────────────────────────────────────────────────────
-    a = ax[0]
-    for ds in DS_ORDER:
-        a.errorbar(gb[ds], thr[ds], yerr=err[ds], fmt=DS_MARKER[ds],
-                   color=DS_COLOR[ds], ms=8, capsize=4, elinewidth=1.3,
-                   label=f"{ds} ({gb[ds]:.1f} GB)", zorder=3)
-    # linear fit on log10(V) (natural-log slope in summary -> convert to /decade)
     slope_ln = summ.get("slope_per_log_gb", 0.0)
     slope_dec = slope_ln * np.log(10)          # per decade
     intercept = summ.get("intercept", 0.0)
-    xs = np.linspace(np.log10(min(gb.values())) - 0.1,
-                     np.log10(max(gb.values())) + 0.1, 100)
-    ys = intercept + slope_ln * (xs * np.log(10))   # summary fit is in ln(V)
-    a.plot(10 ** xs, ys, "--", color=OK["grey"], lw=1.3, zorder=1,
-           label=f"linear fit (n.s.)")
-    a.set_xscale("log")
-    a.set_xlabel("Cumulative volume (GB, log scale)")
-    a.set_ylabel("Throughput $T_{bytes}$ (MB/s)")
-    a.set_title("(a) Weak scaling")
-    a.set_ylim(bottom=0)
-    a.grid(True, which="both", axis="both", ls=":", lw=0.4, color=OK["grey"], alpha=0.5)
-    a.legend(frameon=False, loc="upper right")
     r2 = summ.get("r2", float("nan"))
-    a.text(0.03, 0.05, f"$\\beta$={slope_dec:.0f} MB/s/decade\n$R^2$={r2:.2f}, CI incl. 0",
-           transform=a.transAxes, fontsize=8, va="bottom", color=OK["black"])
-
-    # ── (b) composition effect ──────────────────────────────────────────────
-    b = ax[1]
     cadj = dict(zip(comp.dataset_id, comp.composition_adjusted_throughput_mb_s))
-    x = np.arange(len(DS_ORDER))
-    raw = [thr[ds] for ds in DS_ORDER]
-    adj = [cadj.get(ds, np.nan) for ds in DS_ORDER]
-    b.bar(x, raw, width=0.55, color=OK["grey"], alpha=0.35, label="raw $T_{bytes}$", zorder=1)
-    b.bar(x, adj, width=0.30, color=[DS_COLOR[d] for d in DS_ORDER],
-          label="composition-adjusted $T_{adj}$", zorder=2)
-    b.set_xticks(x)
-    b.set_xticklabels(DS_ORDER)
-    b.set_ylabel("Throughput (MB/s)")
-    b.set_xlabel("Dataset")
-    b.set_title("(b) Composition effect")
-    b.grid(True, axis="y", ls=":", lw=0.4, color=OK["grey"], alpha=0.5)
-    b.legend(frameon=False, loc="upper center")
 
-    # ── (c) strong scaling ──────────────────────────────────────────────────
-    c = ax[2]
-    ecol = "efficiency_mean" if "efficiency_mean" in strong else "parallel_efficiency_mean"
-    estd = "efficiency_std" if "efficiency_std" in strong else None
-    t = strong.threads.values
-    e = strong[ecol].values
-    yerr = strong[estd].values if estd and estd in strong else None
-    c.axhline(1.0, ls="--", color=OK["grey"], lw=1.2, label="ideal $E=1$")
-    c.errorbar(t, e, yerr=yerr, fmt="-o", color=OK["vermillion"], ms=7,
-               capsize=4, elinewidth=1.2, label="measured (AES-GCM)", zorder=3)
-    c.set_xscale("log", base=2)
-    c.set_xticks(t)
-    c.set_xticklabels([str(int(v)) for v in t])
-    c.set_xlabel("AES-GCM worker threads")
-    c.set_ylabel("Parallel efficiency $E(T)$")
-    c.set_title("(c) Strong scaling (D2)")
-    c.set_ylim(0, 1.08)
-    c.grid(True, which="both", ls=":", lw=0.4, color=OK["grey"], alpha=0.5)
-    c.legend(frameon=False, loc="upper right")
+    # ── panel drawers (each takes an axis + a title, so the same code renders
+    #    both the combined 3-panel figure and the standalone single-panel ones) ─
+    def draw_weak(ax, title):
+        for ds in DS_ORDER:
+            ax.errorbar(gb[ds], thr[ds], yerr=err[ds], fmt=DS_MARKER[ds],
+                        color=DS_COLOR[ds], ms=8, capsize=4, elinewidth=1.3,
+                        label=f"{ds} ({gb[ds]:.1f} GB)", zorder=3)
+        xs = np.linspace(np.log10(min(gb.values())) - 0.1,
+                         np.log10(max(gb.values())) + 0.1, 100)
+        ys = intercept + slope_ln * (xs * np.log(10))   # summary fit is in ln(V)
+        ax.plot(10 ** xs, ys, "--", color=OK["grey"], lw=1.3, zorder=1, label="linear fit (n.s.)")
+        ax.set_xscale("log")
+        ax.set_xlabel("Cumulative volume (GB, log scale)")
+        ax.set_ylabel("Throughput $T_{bytes}$ (MB/s)")
+        ax.set_title(title)
+        ax.set_ylim(bottom=0)
+        ax.grid(True, which="both", ls=":", lw=0.4, color=OK["grey"], alpha=0.5)
+        ax.legend(frameon=False, loc="upper right")
+        ax.text(0.03, 0.05, f"$\\beta$={slope_dec:.0f} MB/s/decade\n$R^2$={r2:.2f}, CI incl. 0",
+                transform=ax.transAxes, fontsize=8, va="bottom", color=OK["black"])
 
+    def draw_composition(ax, title):
+        x = np.arange(len(DS_ORDER))
+        raw = [thr[ds] for ds in DS_ORDER]
+        adj = [cadj.get(ds, np.nan) for ds in DS_ORDER]
+        ax.bar(x, raw, width=0.55, color=OK["grey"], alpha=0.35, label="raw $T_{bytes}$", zorder=1)
+        ax.bar(x, adj, width=0.30, color=[DS_COLOR[d] for d in DS_ORDER],
+               label="composition-adjusted $T_{adj}$", zorder=2)
+        ax.set_xticks(x)
+        ax.set_xticklabels(DS_ORDER)
+        ax.set_ylabel("Throughput (MB/s)")
+        ax.set_xlabel("Dataset")
+        ax.set_title(title)
+        ax.grid(True, axis="y", ls=":", lw=0.4, color=OK["grey"], alpha=0.5)
+        ax.legend(frameon=False, loc="upper center")
+
+    def draw_strong(ax, title):
+        ecol = "efficiency_mean" if "efficiency_mean" in strong else "parallel_efficiency_mean"
+        estd = "efficiency_std" if "efficiency_std" in strong else None
+        t = strong.threads.values
+        e = strong[ecol].values
+        yerr = strong[estd].values if estd and estd in strong else None
+        ax.axhline(1.0, ls="--", color=OK["grey"], lw=1.2, label="ideal $E=1$")
+        ax.errorbar(t, e, yerr=yerr, fmt="-o", color=OK["vermillion"], ms=7,
+                    capsize=4, elinewidth=1.2, label="measured (AES-GCM)", zorder=3)
+        ax.set_xscale("log", base=2)
+        ax.set_xticks(t)
+        ax.set_xticklabels([str(int(v)) for v in t])
+        ax.set_xlabel("AES-GCM worker threads")
+        ax.set_ylabel("Parallel efficiency $E(T)$")
+        ax.set_title(title)
+        ax.set_ylim(0, 1.08)
+        ax.grid(True, which="both", ls=":", lw=0.4, color=OK["grey"], alpha=0.5)
+        ax.legend(frameon=False, loc="upper right")
+
+    def savefig(fig, stem):
+        for ext in ("png", "pdf"):
+            out = OUTDIR / f"{stem}.{ext}"
+            fig.savefig(out, bbox_inches="tight")
+        print(f"OK: wrote {OUTDIR / (stem + '.png')}")
+
+    # combined 3-panel (kept for reference / backwards compatibility)
+    fig, ax = plt.subplots(1, 3, figsize=(11.0, 3.5))
+    draw_weak(ax[0], "(a) Weak scaling")
+    draw_composition(ax[1], "(b) Composition effect")
+    draw_strong(ax[2], "(c) Strong scaling (D2)")
     fig.tight_layout()
-    for ext in ("png", "pdf"):
-        out = OUTDIR / f"fig_scalability_3panel.{ext}"
-        fig.savefig(out, bbox_inches="tight")
-        print(f"OK: wrote {out}")
+    savefig(fig, "fig_scalability_3panel")
+    plt.close(fig)
+
+    # standalone single-panel figures (one plot per figure)
+    for stem, drawer, title in [
+        ("fig_scalability_a_weak", draw_weak, "Weak scaling"),
+        ("fig_scalability_b_composition", draw_composition, "Composition effect"),
+        ("fig_scalability_c_strong", draw_strong, "Strong scaling (D2)"),
+    ]:
+        f1, a1 = plt.subplots(1, 1, figsize=(4.2, 3.6))
+        drawer(a1, title)
+        f1.tight_layout()
+        savefig(f1, stem)
+        plt.close(f1)
 
 
 if __name__ == "__main__":
