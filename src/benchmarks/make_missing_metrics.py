@@ -54,7 +54,12 @@ BIN_EXT = {".bin", ".dat", ".raw", ".pdf"}  # adapt if needed
 def now() -> float:
     return time.perf_counter()
 
-def read_bytes(p: Path) -> bytes:
+def read_bytes(p: Path, cap: int = 0) -> bytes:
+    # cap>0 reads only the leading `cap` bytes — keeps compression of very large
+    # incompressible files (e.g. 300 MB MP4) tractable; throughput is per-byte.
+    if cap and cap > 0:
+        with p.open("rb") as f:
+            return f.read(cap)
     return p.read_bytes()
 
 def is_image(p: Path) -> bool:
@@ -193,11 +198,12 @@ class BenchCfg:
     max_files: int = 200
     image_size: int = 32
     kem_alg: str = "ML-KEM-1024"
+    max_bytes_per_file: int = 0
 
 def make_compression_ratios(cfg: BenchCfg, files: List[Path]) -> pd.DataFrame:
     rows = []
     for p in files[: cfg.max_files]:
-        b = read_bytes(p)
+        b = read_bytes(p, cfg.max_bytes_per_file)
         n_in = len(b)
         for algo, (comp, decomp) in COMPRESSORS.items():
             try:
@@ -292,7 +298,7 @@ def make_pipeline_throughput_and_latency(cfg: BenchCfg, files: List[Path]) -> Tu
     }
 
     for p in files[: cfg.max_files]:
-        b = read_bytes(p)
+        b = read_bytes(p, cfg.max_bytes_per_file)
         size_mb = len(b) / (1024.0 * 1024.0)
 
         for pid, desc in pipelines.items():
@@ -368,9 +374,10 @@ def main():
     ap.add_argument("--max-files", type=int, default=200)
     ap.add_argument("--image-size", type=int, default=32)
     ap.add_argument("--kem-alg", default="ML-KEM-1024")
+    ap.add_argument("--max-bytes-per-file", type=int, default=0, help="0=full file; >0 caps bytes read per file")
     args = ap.parse_args()
 
-    cfg = BenchCfg(data_dir=Path(args.data_dir), max_files=args.max_files, image_size=args.image_size, kem_alg=args.kem_alg)
+    cfg = BenchCfg(data_dir=Path(args.data_dir), max_files=args.max_files, image_size=args.image_size, kem_alg=args.kem_alg, max_bytes_per_file=args.max_bytes_per_file)
     ensure_dirs()
 
     files = list_files(cfg.data_dir)

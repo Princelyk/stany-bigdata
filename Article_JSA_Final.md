@@ -19,7 +19,7 @@ date: 2025
 Securing heterogeneous data at scale requires balancing three requirements: reducing data volumes, ensuring confidentiality and integrity, and maintaining usable performance as data size grows. We propose and evaluate a reproducible hybrid pipeline combining a Variational Autoencoder (VAE) for pre-encryption compression, AES-256-GCM authenticated encryption, and a post-quantum ML-KEM/Kyber-1024 key encapsulation mechanism. The pipeline is evaluated on a real-world dataset (D1) of 126 files totalling 3.79 GB (75 JPEG images, 50 binary MP4 files, 1 JSON text file), using micro-benchmarks, NIST CAVP test-vector validation (775/775 pass, 100%), a three-dataset weak- and strong-scaling study (D1–D3, 3.8–40 GB, three replicates each), and an ablation study isolating each layer's contribution.
 
 
-Results show that: (i) AES-256-GCM throughput ranges from 109 MB/s (1 KB) to 1,387 MB/s (64 KB); (ii) ML-KEM/Kyber-1024 costs 47.4 ms per exchange (keygen 12.59 ms, encaps 14.92 ms, decaps 19.90 ms) under a pure-Python shim; (iii) across a three-dataset scalability study (D1–D3, 3.8–40 GB) a one-way ANOVA shows throughput differs significantly between datasets ($p = 0.017$) while a log-volume regression detects no monotonic trend (slope 95% CI includes zero) — throughput is governed by file-size distribution via the fixed per-file ML-KEM cost rather than by total volume, and AES-GCM strong scaling peaks near four threads (parallel efficiency 0.30); (iv) an ablation study reveals that removing ML-KEM raises binary throughput from 578 to 913 MB/s, while adding gzip collapses it to 25 MB/s on high-entropy MP4 data.
+Results show that: (i) AES-256-GCM throughput ranges from 335 MB/s (1 KB) to 1,860 MB/s (64 KB); (ii) ML-KEM/Kyber-1024 costs 42.9 ms per exchange (keygen 11.34 ms, encaps 13.69 ms, decaps 17.88 ms) under a pure-Python shim; (iii) across a three-dataset scalability study (D1–D3, 3.8–40 GB) a one-way ANOVA shows throughput differs significantly between datasets ($p = 0.017$) while a log-volume regression detects no monotonic trend (slope 95% CI includes zero) — throughput is governed by file-size distribution via the fixed per-file ML-KEM cost rather than by total volume, and AES-GCM strong scaling peaks near four threads (parallel efficiency 0.30); (iv) an ablation study reveals that removing ML-KEM raises binary throughput from 256 to 741 MB/s, while adding gzip collapses it to 18.6 MB/s on high-entropy MP4 data.
 
 
 **Keywords:** Hybrid cryptography · Large-scale data security · Variational Autoencoder · AES-256-GCM · ML-KEM/Kyber · Post-quantum cryptography
@@ -200,7 +200,7 @@ HybridDecrypt(ct, K_enc, N, τ, sk_Kyber):
 | Encoder | Input → Conv2D(32) → Conv2D(64) → FC(512) → [µ, log σ²] | ReLU; BatchNorm |
 | Latent space | z ~ 𝒩(µ, σ²I), dim k = 128 | 6× CR on 32×32 input |
 | Decoder | z → FC(512) → ConvTranspose2D(64) → Output | Sigmoid; MSE + β·KL |
-| Training (30 epochs, β=0.01) | Adam lr=5×10⁻⁴; β=0.01; 30 epochs; 80/20 split | Best val. PSNR: 14.85 dB (ep.28); KL: 0.05–0.14; 75 images; collapse resolved |
+| Training (30 epochs, β=0.01) | Adam lr=5×10⁻⁴; β=0.01; 30 epochs; 80/20 split | Best val. PSNR: 15.16 dB (ep.28); KL: 0.05–0.14; 75 images; collapse resolved |
 
 
 ## 4.4  KEM–DEM Security Composition
@@ -239,9 +239,9 @@ For the cross-dataset scalability study (Section 5.6) we additionally construct 
 *Fig. 6  Multi-objective trade-off: compression ratio vs. PSNR vs. throughput.*
 
 
-![Fig. 7  VAE training history (30 epochs, β=0.01): KL rose from ≈10⁻⁵ to 0.05–0.14; best val. PSNR = 14.85 dB at epoch 28. Posterior collapse resolved.](results/figures/figures/fig02_vae_training_history.png)
+![Fig. 7  VAE training history (30 epochs, β=0.01): KL rose from ≈10⁻⁵ to 0.05–0.14; best val. PSNR = 15.16 dB at epoch 28. Posterior collapse resolved.](results/figures/figures/fig02_vae_training_history.png)
 
-*Fig. 7  VAE training history (30 epochs, β=0.01): KL rose from ≈10⁻⁵ to 0.05–0.14; best val. PSNR = 14.85 dB at epoch 28. Posterior collapse resolved.*
+*Fig. 7  VAE training history (30 epochs, β=0.01): KL rose from ≈10⁻⁵ to 0.05–0.14; best val. PSNR = 15.16 dB at epoch 28. Posterior collapse resolved.*
 
 
 ![Fig. 8  VAE reconstructions (30 epochs, β=0.01). Top: six 32×32 test patterns. Bottom: reconstructions with per-pattern SSIM scores (gradient=0.464, circle=0.044, noise=0.011, stripes=0.119, checkerboard=0.019, gray=0.945). All outputs are content-specific — posterior collapse resolved.](results/figures/paper/fig07_vae_reconstruction.png)
@@ -266,19 +266,19 @@ For the cross-dataset scalability study (Section 5.6) we additionally construct 
 *Table 6. Median per-layer latency by file type, Pipeline B.*
 
 
-![Fig. 10  AES-256-GCM throughput: 109 MB/s (1 KB) → 1,387 MB/s (64 KB).](results/figures/figures/fig06_aes_microbench.png)
+![Fig. 10  AES-256-GCM throughput: 335 MB/s (1 KB) → 1,860 MB/s (64 KB).](results/figures/figures/fig06_aes_microbench.png)
 
-*Fig. 10  AES-256-GCM throughput: 109 MB/s (1 KB) → 1,387 MB/s (64 KB).*
+*Fig. 10  AES-256-GCM throughput: 335 MB/s (1 KB) → 1,860 MB/s (64 KB).*
 
 
 | Size | Enc. throughput (MB/s) | Dec. throughput (MB/s) |
 |---|---|---|
-| 1 KB | 109 | 112 |
-| 4 KB | 532 | 537 |
-| 16 KB | 997 | 1,027 |
-| 64 KB | 1,387 | 1,344 |
-| 256 KB | 1,511 | 1,510 |
-| 1 MB | 792 | 912 |
+| 1 KB | 335 | 340 |
+| 4 KB | 721 | 706 |
+| 16 KB | 1,398 | 1,446 |
+| 64 KB | 1,860 | 1,861 |
+| 256 KB | 1,946 | 1,952 |
+| 1 MB | 1,054 | 1,207 |
 
 *Table 6b. AES-256-GCM throughput by plaintext size.*
 
@@ -333,10 +333,10 @@ For the cross-dataset scalability study (Section 5.6) we additionally construct 
 
 | Config | Img (MB/s) | Bin (MB/s) | Avg (MB/s) | PQ-hardened | Compression |
 |---|---|---|---|---|---|
-| A: zstd+AES+KEM | 121.7 | 220.8 | 114.2 | Yes | zstd |
-| **B: raw+AES+KEM** | **203.8** | **578.3** | **260.7** | **Yes** | **None** |
-| C: raw+AES | 993.6 | 912.8 | 635.5 | No | None |
-| D: gzip+AES+KEM | 23.9 | 24.6 | 16.1 | Yes | gzip (slow on entropy) |
+| A: zstd+AES+KEM | 93.0 | 148.1 | 114.5 | Yes | zstd |
+| **B: raw+AES+KEM** | **148.0** | **255.8** | **189.9** | **Yes** | **None** |
+| C: raw+AES | 719.1 | 740.8 | 727.5 | No | None |
+| D: gzip+AES+KEM | 16.7 | 18.6 | 17.5 | Yes | gzip (slow on entropy) |
 
 *Table 9. Ablation study. B = recommended baseline for PQ security.*
 
@@ -399,10 +399,10 @@ We characterise throughput across three independently constructed datasets — *
 # 6  Discussion
 
 
-The ML-KEM/Kyber-1024 overhead of 47.4 ms per key exchange (pure-Python shim) is the dominant per-file cost for small files, but amortises for large binaries. On bare-metal native liboqs, this reduces to ~50–100 µs (SUPERCOP).
+The ML-KEM/Kyber-1024 overhead of 42.9 ms per key exchange (pure-Python shim) is the dominant per-file cost for small files, but amortises for large binaries. On bare-metal native liboqs, this reduces to ~50–100 µs (SUPERCOP).
 
 
-The VAE (30 epochs, β=0.01, best PSNR = 14.85 dB) confirms both the compression potential and the key limitation of the image-trained model: smooth inputs reconstruct well (gradient SSIM = 0.464, uniform gray SSIM = 0.945), while high-frequency patterns and binary/tabular data show near-zero compression gain. An entropy-aware file-type router that bypasses the VAE for high-entropy content is the correct engineering remedy. Critically, posterior collapse — where the encoder ignores all inputs and outputs a constant gray — was resolved by reducing β from 1.0 to 0.01, allowing the reconstruction loss to establish structure before KL regularisation engages.
+The VAE (30 epochs, β=0.01, best PSNR = 15.16 dB) confirms both the compression potential and the key limitation of the image-trained model: smooth inputs reconstruct well (gradient SSIM = 0.464, uniform gray SSIM = 0.945), while high-frequency patterns and binary/tabular data show near-zero compression gain. An entropy-aware file-type router that bypasses the VAE for high-entropy content is the correct engineering remedy. Critically, posterior collapse — where the encoder ignores all inputs and outputs a constant gray — was resolved by reducing β from 1.0 to 0.01, allowing the reconstruction loss to establish structure before KL regularisation engages.
 
 
 The originality of this work lies not in any individual component, but in their vertical integration and joint quantitative evaluation on real heterogeneous data, with explicit cost characterisation of each layer.
@@ -426,10 +426,10 @@ This work presents and evaluates a modular hybrid security pipeline integrating 
 **Key findings:**
 
 1. NIST CAVP: 775/775 = 100% pass rate for AES-256-GCM and ML-KEM-1024.
-1. ML-KEM overhead: 47.4 ms/exchange (pure-Python); ~50–100 µs on native bare-metal.
-1. Classical compression fails on high-entropy data: gzip collapses throughput to 24 MB/s.
-1. No throughput collapse: mean 941.5 MB/s, $\beta = -0.09$ MB/s/GB, $R^2 < 0.01$.
-1. VAE (30 epochs, β=0.01): best PSNR = 14.85 dB; posterior collapse resolved (KL ≈ 0.05–0.14); smooth inputs SSIM up to 0.945; high-frequency patterns remain challenging (SSIM 0.011–0.019) due to training set size (68 images).
+1. ML-KEM overhead: 42.9 ms/exchange (pure-Python); ~50–100 µs on native bare-metal.
+1. Classical compression fails on high-entropy data: gzip collapses throughput to 18.6 MB/s.
+1. Scalability (D1–D3, 3.8–40 GB): no significant volume trend (slope CI includes zero) but datasets differ (ANOVA $p = 0.017$) — throughput is file-count-bound, not volume-bound.
+1. VAE (30 epochs, β=0.01): best PSNR = 15.16 dB; posterior collapse resolved (KL ≈ 0.05–0.14); smooth inputs SSIM up to 0.945; high-frequency patterns remain challenging (SSIM 0.011–0.019) due to training set size (68 images).
 
 
 Future work: (i) bare-metal Linux with native liboqs; (ii) formal KEM-DEM proof; (iii) entropy-aware file-type router; (iv) PSNR > 25 dB VAE; (v) >30 GB scalability; (vi) extension to IoT/streaming data.

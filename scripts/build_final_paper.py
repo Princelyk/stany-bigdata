@@ -196,18 +196,18 @@ body(doc,
     "strong-scaling study (D1–D3, 3.8–40 GB, three replicates each), and "
     "an ablation study isolating each layer's contribution.")
 body(doc,
-    "Results show that: (i) AES-256-GCM throughput ranges from 109 MB/s (1 KB "
-    "payloads) to 1,387 MB/s (64 KB payloads), confirming O(n) complexity; "
-    "(ii) ML-KEM/Kyber-1024 key exchange costs 47.4 ms per operation under a "
-    "pure-Python shim (keygen 12.59 ms, encaps 14.92 ms, decaps 19.90 ms); "
+    "Results show that: (i) AES-256-GCM throughput ranges from 335 MB/s (1 KB "
+    "payloads) to 1,860 MB/s (64 KB payloads), confirming O(n) complexity; "
+    "(ii) ML-KEM/Kyber-1024 key exchange costs 42.9 ms per operation under a "
+    "pure-Python shim (keygen 11.34 ms, encaps 13.69 ms, decaps 17.88 ms); "
     "(iii) across a three-dataset scalability study (D1–D3, 3.8–40 GB) a one-way "
     "ANOVA shows throughput differs significantly between datasets (p = 0.017) while "
     "a log-volume regression detects no monotonic trend (slope 95% CI includes zero), "
     "indicating that throughput is governed by file-size distribution — via the fixed "
     "per-file ML-KEM cost — rather than by total volume, with AES-GCM strong scaling "
     "peaking near four threads (parallel efficiency 0.30); (iv) an ablation study reveals that removing "
-    "ML-KEM raises binary throughput from 578 MB/s to 913 MB/s, while adding gzip "
-    "compression collapses it to 25 MB/s on high-entropy MP4 data. The primary "
+    "ML-KEM raises binary throughput from 256 MB/s to 741 MB/s, while adding gzip "
+    "compression collapses it to 18.6 MB/s on high-entropy MP4 data. The primary "
     "contribution is a system-level integration and reproducible joint evaluation of "
     "three complementary security layers — learned compression, standardised AEAD, "
     "and post-quantum KEM — on real multi-format data; a combination not yet jointly "
@@ -593,7 +593,7 @@ for comp, arch, hyp in [
      "Sigmoid output; loss = MSE + β·KL (β = 1.0)"),
     ("Training (30 epochs, β=0.01)",
      "Adam lr = 5×10⁻⁴; 30 epochs; β = 0.01 (KL-balanced); 80/20 split on image subset",
-     "Best val. PSNR: 14.85 dB (epoch 28); val. MSE: 0.033; KL: 0.05–0.14; 75 images; posterior collapse resolved"),
+     "Best val. PSNR: 15.16 dB (epoch 28); val. MSE: 0.033; KL: 0.05–0.14; 75 images; posterior collapse resolved"),
 ]:
     tbl_row(t4, [comp, arch, hyp], sz=9)
 spacer(doc)
@@ -610,7 +610,7 @@ body(doc,
     "The VAE provides no cryptographic guarantee: z is treated as plaintext. "
     "A 30-epoch training run with β = 0.01 resolved the posterior collapse "
     "observed in the initial 2-epoch run (KL rose from ≈10⁻⁵ to 0.05–0.14), "
-    "yielding input-specific reconstructions with best val. PSNR = 14.85 dB.")
+    "yielding input-specific reconstructions with best val. PSNR = 15.16 dB.")
 
 add_heading(doc, "4.3.3  Evaluation Metrics", level=3)
 for m in [
@@ -677,13 +677,13 @@ tbl_row(t5, ["Metric","AES-256-GCM","ML-KEM/Kyber-1024","VAE (images)","Full pip
 bold_row(t5.rows[0])
 for m, aes, kem, vae, fp in [
     ("Throughput (MB/s) median",
-     "109–1,387 (size-dependent)",
+     "335–1,946 (size-dependent)",
      "N/A (key op)",
      "~12 [±3] (VAE inference)",
-     "203.8 img / 578.3 bin"),
+     "148.0 img / 255.8 bin"),
     ("Latency (ms/op) median",
      "<1 ms/MB @ 64 KB",
-     "47.4 ms (keygen + encaps + decaps)",
+     "42.9 ms (keygen + encaps + decaps)",
      "Dominant in end-to-end",
      "31.4 ms (images) / 71.6 ms (binary)"),
     ("Compression ratio CR",
@@ -694,7 +694,7 @@ for m, aes, kem, vae, fp in [
     ("PSNR / SSIM",
      "/",
      "/",
-     "14.85 dB PSNR (30-epoch, β=0.01); SSIM: 0.46 (gradient) – 0.95 (gray)",
+     "15.16 dB PSNR (30-epoch, β=0.01); SSIM: 0.46 (gradient) – 0.95 (gray)",
      "/"),
     ("Security level λ_eff",
      "256-bit classical",
@@ -715,7 +715,7 @@ body(doc,
     "video content. The VAE encodes a 32×32 RGB thumbnail to a 128-dim latent "
     "vector (6× compression on the resized input) but at the cost of information "
     "loss: after a 30-epoch training run with β = 0.01, the best validation "
-    "PSNR is 14.85 dB. This result is reported explicitly rather than selectively.")
+    "PSNR is 15.16 dB. This result is reported explicitly rather than selectively.")
 insert_figure(doc, "fig03_compression_ratios.png",
     "Fig. 5  Compression ratios by algorithm on D1. Classical compressors achieve "
     "≈1× on JPEG/MP4 (already compressed). VAE achieves 6× on 32×32 input "
@@ -733,7 +733,7 @@ body(doc,
     "Figure 7 shows the VAE training history across 30 epochs (β = 0.01, lr = 5×10⁻⁴). "
     "The KL term rose from near-zero (≈10⁻⁵) at epoch 1 to a stable 0.05–0.14 range "
     "by epoch 15, confirming that the posterior collapse present in the initial "
-    "2-epoch run was resolved. Best validation PSNR = 14.85 dB was reached at "
+    "2-epoch run was resolved. Best validation PSNR = 15.16 dB was reached at "
     "epoch 28 (val. MSE = 0.033).")
 insert_figure(doc, "fig02_vae_training_history.png",
     "Fig. 7  VAE training history: ELBO loss components (recon + β·KL) and validation PSNR "
@@ -791,12 +791,12 @@ spacer(doc)
 
 body(doc,
     "The AES-256-GCM micro-benchmark (Figure 10) shows throughput ranging from "
-    "109 MB/s (1 KB payloads) to 1,387 MB/s (64 KB), rising to 1,511 MB/s at "
+    "335 MB/s (1 KB payloads) to 1,860 MB/s (64 KB), rising to 1,946 MB/s at "
     "256 KB before declining at 1 MB (792 MB/s) due to memory effects — consistent "
     "with O(n) AES-CTR complexity and Python GIL overhead at large sizes.")
 insert_figure(doc, "fig06_aes_microbench.png",
     "Fig. 10  AES-256-GCM micro-benchmark: throughput and round-trip latency vs. "
-    "plaintext size. Peak throughput ~1,387 MB/s at 64 KB.")
+    "plaintext size. Peak throughput ~1,946 MB/s at 256 KB.")
 
 caption(doc, "Table 6b. AES-256-GCM throughput by plaintext size.", fig=False)
 t6b = doc.add_table(rows=1, cols=4)
@@ -805,12 +805,12 @@ tbl_row(t6b, ["Size","Enc. latency (ms)","Enc. throughput (MB/s)","Dec. throughp
         bold=True, sz=9)
 bold_row(t6b.rows[0])
 for sz, el, et, dt in [
-    ("1 KB",   "0.009","109","112"),
-    ("4 KB",   "0.007","532","537"),
-    ("16 KB",  "0.016","997","1,027"),
-    ("64 KB",  "0.045","1,387","1,344"),
-    ("256 KB", "0.165","1,511","1,510"),
-    ("1 MB",   "1.263","792","912"),
+    ("1 KB",   "0.003","335","340"),
+    ("4 KB",   "0.005","721","706"),
+    ("16 KB",  "0.011","1,398","1,446"),
+    ("64 KB",  "0.034","1,860","1,861"),
+    ("256 KB", "0.128","1,946","1,952"),
+    ("1 MB",   "0.949","1,054","1,207"),
 ]:
     tbl_row(t6b, [sz, el, et, dt], sz=9)
 spacer(doc)
@@ -887,11 +887,11 @@ body(doc,
     "Table 9 and Figure 13 present the ablation study across four pipeline "
     "configurations, isolating the contribution of each layer. The comparison "
     "B vs. C quantifies the ML-KEM overhead: removing post-quantum key "
-    "encapsulation raises image throughput from 203.8 to 993.6 MB/s (4.9×) and "
-    "binary throughput from 578.3 to 912.8 MB/s (1.6×). The comparison A vs. B "
+    "encapsulation raises image throughput from 148.0 to 719.1 MB/s (4.9×) and "
+    "binary throughput from 255.8 to 740.8 MB/s (2.9×). The comparison A vs. B "
     "shows that adding zstd compression reduces throughput by 40–60% on "
     "already-compressed data. Config D (gzip + AES + KEM) collapses to "
-    "~24 MB/s, demonstrating the danger of applying an inappropriate compressor "
+    "~18 MB/s, demonstrating the danger of applying an inappropriate compressor "
     "to high-entropy data.")
 caption(doc, "Table 9. Ablation study: throughput and security properties by configuration.", fig=False)
 t9 = doc.add_table(rows=1, cols=6)
@@ -900,10 +900,10 @@ tbl_row(t9, ["Config","Img (MB/s)","Bin (MB/s)","Avg (MB/s)","PQ-hardened","Comp
         bold=True, sz=9)
 bold_row(t9.rows[0])
 for cfg, img, bn, avg, pq, comp in [
-    ("A: zstd+AES+KEM","121.7","220.8","114.2","Yes (ML-KEM-1024)","zstd"),
-    ("B: raw+AES+KEM",  "203.8","578.3","260.7","Yes (ML-KEM-1024)","None"),
-    ("C: raw+AES",       "993.6","912.8","635.5","No",               "None"),
-    ("D: gzip+AES+KEM",  "23.9", "24.6", "16.1","Yes (ML-KEM-1024)","gzip (slow on entropy)"),
+    ("A: zstd+AES+KEM","93.0","148.1","114.5","Yes (ML-KEM-1024)","zstd"),
+    ("B: raw+AES+KEM",  "148.0","255.8","189.9","Yes (ML-KEM-1024)","None"),
+    ("C: raw+AES",       "719.1","740.8","727.5","No",               "None"),
+    ("D: gzip+AES+KEM",  "16.7", "18.6", "17.5","Yes (ML-KEM-1024)","gzip (slow on entropy)"),
 ]:
     r = tbl_row(t9, [cfg, img, bn, avg, pq, comp], sz=9)
     if cfg == "B: raw+AES+KEM":
@@ -1048,7 +1048,7 @@ italic_bold(doc,
 # ══════════════════════════════════════════════════════════════════════════════
 add_heading(doc, "6  Discussion", level=1)
 body(doc,
-    "The ML-KEM/Kyber-1024 overhead of 47.4 ms per key exchange (pure-Python "
+    "The ML-KEM/Kyber-1024 overhead of 42.9 ms per key exchange (pure-Python "
     "shim) is the dominant per-file cryptographic cost for small files (a 7 KB "
     "JPEG takes ~7 ms for AES but ~25 ms for KEM decapsulation), but amortises "
     "favourably for large binary files (>10 MB) where AES throughput dominates. "
@@ -1131,13 +1131,15 @@ body(doc, "Key findings:")
 for kf in [
     "NIST CAVP correctness: 775/775 test vectors passed (100%) for both AES-256-GCM "
     "and ML-KEM-1024, confirming bit-exact compliance with NIST reference implementations.",
-    "ML-KEM overhead is fixed per-file: 47.4 ms/exchange (pure-Python), dominant for "
+    "ML-KEM overhead is fixed per-file: 42.9 ms/exchange (pure-Python), dominant for "
     "small files, amortises for large files. Native liboqs reduces this to ~50–100 µs.",
     "Classical compression fails on high-entropy data: JPEG/MP4 files are "
-    "near-incompressible; gzip collapses throughput to 24 MB/s on such content.",
-    "No throughput collapse at the measured scale: mean 941.5 MB/s, β = −0.09 MB/s/GB, "
-    "R² < 0.01 over 0.6–3.79 GB.",
-    "VAE reconstruction: best PSNR = 14.85 dB after 30 epochs (β = 0.01); "
+    "near-incompressible; gzip collapses throughput to 18.6 MB/s on such content.",
+    "Across the three-dataset scalability study (D1–D3, 3.8–40 GB) throughput shows "
+    "no significant volume-driven trend (regression slope 95% CI includes zero) but "
+    "differs significantly between datasets (ANOVA p = 0.017); it is governed by "
+    "file-size distribution via the fixed per-file ML-KEM cost, not by total volume.",
+    "VAE reconstruction: best PSNR = 15.16 dB after 30 epochs (β = 0.01); "
     "posterior collapse resolved (KL ≈ 0.05–0.14). Quality is limited by training "
     "set size (68 images); smooth patterns reconstruct well (SSIM up to 0.945) "
     "while high-frequency patterns remain challenging (SSIM as low as 0.011).",
@@ -1340,9 +1342,9 @@ mp(
     "and an ablation study isolating each layer's contribution."
 )
 mp(
-    "Results show that: (i) AES-256-GCM throughput ranges from 109 MB/s (1 KB) "
-    "to 1,387 MB/s (64 KB); (ii) ML-KEM/Kyber-1024 costs 47.4 ms per exchange "
-    "(keygen 12.59 ms, encaps 14.92 ms, decaps 19.90 ms) under a pure-Python shim; "
+    "Results show that: (i) AES-256-GCM throughput ranges from 335 MB/s (1 KB) "
+    "to 1,860 MB/s (64 KB); (ii) ML-KEM/Kyber-1024 costs 42.9 ms per exchange "
+    "(keygen 11.34 ms, encaps 13.69 ms, decaps 17.88 ms) under a pure-Python shim; "
     "(iii) across a three-dataset scalability study (D1–D3, 3.8–40 GB) a one-way "
     "ANOVA shows throughput differs significantly between datasets ($p = 0.017$) "
     "while a log-volume regression detects no monotonic trend (slope 95% CI includes "
@@ -1350,7 +1352,7 @@ mp(
     "ML-KEM cost rather than by total volume, and AES-GCM strong scaling peaks near "
     "four threads (parallel efficiency 0.30); "
     "(iv) an ablation study reveals that removing ML-KEM raises binary throughput "
-    "from 578 to 913 MB/s, while adding gzip collapses it to 25 MB/s on "
+    "from 256 to 741 MB/s, while adding gzip collapses it to 18.6 MB/s on "
     "high-entropy MP4 data."
 )
 mp("**Keywords:** Hybrid cryptography · Large-scale data security · "
@@ -1504,7 +1506,7 @@ mtbl(
         ["Encoder","Input → Conv2D(32) → Conv2D(64) → FC(512) → [µ, log σ²]","ReLU; BatchNorm"],
         ["Latent space","z ~ 𝒩(µ, σ²I), dim k = 128","6× CR on 32×32 input"],
         ["Decoder","z → FC(512) → ConvTranspose2D(64) → Output","Sigmoid; MSE + β·KL"],
-        ["Training (30 epochs, β=0.01)","Adam lr=5×10⁻⁴; β=0.01; 30 epochs; 80/20 split","Best val. PSNR: 14.85 dB (ep.28); KL: 0.05–0.14; 75 images; collapse resolved"],
+        ["Training (30 epochs, β=0.01)","Adam lr=5×10⁻⁴; β=0.01; 30 epochs; 80/20 split","Best val. PSNR: 15.16 dB (ep.28); KL: 0.05–0.14; 75 images; collapse resolved"],
     ]
 )
 
@@ -1546,7 +1548,7 @@ mfig("fig_pareto_frontier.png",
      "Fig. 6  Multi-objective trade-off: compression ratio vs. PSNR vs. throughput.")
 mfig("fig02_vae_training_history.png",
      "Fig. 7  VAE training history (30 epochs, β=0.01): KL rose from ≈10⁻⁵ to 0.05–0.14; "
-     "best val. PSNR = 14.85 dB at epoch 28. Posterior collapse resolved.")
+     "best val. PSNR = 15.16 dB at epoch 28. Posterior collapse resolved.")
 mfig("fig07_vae_reconstruction.png",
      "Fig. 8  VAE reconstructions (30 epochs, β=0.01). Top: six 32×32 test patterns. "
      "Bottom: reconstructions with per-pattern SSIM scores "
@@ -1569,16 +1571,16 @@ mtbl(
 A("*Table 6. Median per-layer latency by file type, Pipeline B.*\n")
 
 mfig("fig06_aes_microbench.png",
-     "Fig. 10  AES-256-GCM throughput: 109 MB/s (1 KB) → 1,387 MB/s (64 KB).")
+     "Fig. 10  AES-256-GCM throughput: 335 MB/s (1 KB) → 1,860 MB/s (64 KB).")
 mtbl(
     ["Size","Enc. throughput (MB/s)","Dec. throughput (MB/s)"],
     [
-        ["1 KB","109","112"],
-        ["4 KB","532","537"],
-        ["16 KB","997","1,027"],
-        ["64 KB","1,387","1,344"],
-        ["256 KB","1,511","1,510"],
-        ["1 MB","792","912"],
+        ["1 KB","335","340"],
+        ["4 KB","721","706"],
+        ["16 KB","1,398","1,446"],
+        ["64 KB","1,860","1,861"],
+        ["256 KB","1,946","1,952"],
+        ["1 MB","1,054","1,207"],
     ]
 )
 A("*Table 6b. AES-256-GCM throughput by plaintext size.*\n")
@@ -1621,10 +1623,10 @@ mfig("fig08_ablation.png",
 mtbl(
     ["Config","Img (MB/s)","Bin (MB/s)","Avg (MB/s)","PQ-hardened","Compression"],
     [
-        ["A: zstd+AES+KEM","121.7","220.8","114.2","Yes","zstd"],
-        ["**B: raw+AES+KEM**","**203.8**","**578.3**","**260.7**","**Yes**","**None**"],
-        ["C: raw+AES","993.6","912.8","635.5","No","None"],
-        ["D: gzip+AES+KEM","23.9","24.6","16.1","Yes","gzip (slow on entropy)"],
+        ["A: zstd+AES+KEM","93.0","148.1","114.5","Yes","zstd"],
+        ["**B: raw+AES+KEM**","**148.0**","**255.8**","**189.9**","**Yes**","**None**"],
+        ["C: raw+AES","719.1","740.8","727.5","No","None"],
+        ["D: gzip+AES+KEM","16.7","18.6","17.5","Yes","gzip (slow on entropy)"],
     ]
 )
 A("*Table 9. Ablation study. B = recommended baseline for PQ security.*\n")
@@ -1700,10 +1702,10 @@ mp("*Scope.* These measurements characterise single-node, CPU-only, pure-Python 
    "native liboqs, or to multi-node deployment is future work (Section 6).")
 
 mh("6  Discussion")
-mp("The ML-KEM/Kyber-1024 overhead of 47.4 ms per key exchange (pure-Python shim) "
+mp("The ML-KEM/Kyber-1024 overhead of 42.9 ms per key exchange (pure-Python shim) "
    "is the dominant per-file cost for small files, but amortises for large binaries. "
    "On bare-metal native liboqs, this reduces to ~50–100 µs (SUPERCOP).")
-mp("The VAE (30 epochs, β=0.01, best PSNR = 14.85 dB) confirms both the compression "
+mp("The VAE (30 epochs, β=0.01, best PSNR = 15.16 dB) confirms both the compression "
    "potential and the key limitation of the image-trained model: smooth inputs "
    "reconstruct well (gradient SSIM = 0.464, uniform gray SSIM = 0.945), while "
    "high-frequency patterns and binary/tabular data show near-zero compression gain. "
@@ -1743,10 +1745,12 @@ mp("This work presents and evaluates a modular hybrid security pipeline integrat
 mp("**Key findings:**")
 for kf in [
     "NIST CAVP: 775/775 = 100% pass rate for AES-256-GCM and ML-KEM-1024.",
-    "ML-KEM overhead: 47.4 ms/exchange (pure-Python); ~50–100 µs on native bare-metal.",
-    "Classical compression fails on high-entropy data: gzip collapses throughput to 24 MB/s.",
-    "No throughput collapse: mean 941.5 MB/s, $\\beta = -0.09$ MB/s/GB, $R^2 < 0.01$.",
-    "VAE (30 epochs, β=0.01): best PSNR = 14.85 dB; posterior collapse resolved "
+    "ML-KEM overhead: 42.9 ms/exchange (pure-Python); ~50–100 µs on native bare-metal.",
+    "Classical compression fails on high-entropy data: gzip collapses throughput to 18.6 MB/s.",
+    "Scalability (D1–D3, 3.8–40 GB): no significant volume trend (slope CI includes "
+    "zero) but datasets differ (ANOVA $p = 0.017$) — throughput is file-count-bound, "
+    "not volume-bound.",
+    "VAE (30 epochs, β=0.01): best PSNR = 15.16 dB; posterior collapse resolved "
     "(KL ≈ 0.05–0.14); smooth inputs SSIM up to 0.945; high-frequency patterns remain "
     "challenging (SSIM 0.011–0.019) due to training set size (68 images).",
 ]:
